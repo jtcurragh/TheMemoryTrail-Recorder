@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useTrail } from '../hooks/useTrail'
 import { getTrailById } from '../db/trails'
 import { getPOIsByTrailId } from '../db/pois'
@@ -12,7 +12,7 @@ function ThumbnailImage({ blob, alt }: { blob: Blob; alt: string }) {
   const [src, setSrc] = useState<string | null>(null)
   useEffect(() => {
     const url = URL.createObjectURL(blob)
-    setSrc(url)
+    queueMicrotask(() => setSrc(url))
     return () => URL.revokeObjectURL(url)
   }, [blob])
   if (!src) return <div className="w-full h-full bg-govuk-background animate-pulse" />
@@ -104,15 +104,24 @@ export function TrailScreen() {
         {pois
           .sort((a, b) => a.sequence - b.sequence)
           .map((poi) => (
-            <div
+            <Link
               key={poi.id}
-              className="aspect-square bg-govuk-background rounded overflow-hidden border border-govuk-border"
+              to={`/trail/poi/${poi.id}`}
+              className="block aspect-square bg-govuk-background rounded overflow-hidden border border-govuk-border focus:outline-none focus:ring-2 focus:ring-tmt-focus focus:ring-offset-2"
+              aria-label={`POI ${poi.sequence}: ${poi.siteName || poi.filename}`}
             >
-              <ThumbnailImage
-                blob={poi.thumbnailBlob}
-                alt={poi.siteName || poi.filename}
-              />
-            </div>
+              <div className="relative w-full h-full">
+                <ThumbnailImage
+                  blob={poi.thumbnailBlob}
+                  alt={poi.siteName || poi.filename}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
+                  <span className="text-white text-xs font-mono">
+                    {poi.sequence}. {poi.filename}
+                  </span>
+                </div>
+              </div>
+            </Link>
           ))}
       </div>
     </main>

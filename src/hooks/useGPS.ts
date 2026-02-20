@@ -33,5 +33,14 @@ export function useGPS() {
     )
   }, [])
 
-  return { ...state, recordLocation }
+  const clearPosition = useCallback(() => {
+    setState({
+      latitude: null,
+      longitude: null,
+      accuracy: null,
+      status: 'idle',
+    })
+  }, [])
+
+  return { ...state, recordLocation, clearPosition }
 }

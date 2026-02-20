@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useTrail } from '../hooks/useTrail'
-import { useHideBottomNav } from '../context/HideBottomNavContext'
+import { useHideBottomNav } from '../hooks/useHideBottomNav'
 import { useCamera } from '../hooks/useCamera'
 import { useGPS } from '../hooks/useGPS'
 import { getTrailById } from '../db/trails'
@@ -26,7 +26,7 @@ export function CaptureScreen() {
     captureFrame,
     ensureCameraRunning,
   } = useCamera()
-  const { latitude, longitude, accuracy, status: gpsStatus, recordLocation } = useGPS()
+  const { latitude, longitude, accuracy, status: gpsStatus, recordLocation, clearPosition } = useGPS()
 
   const [trail, setTrail] = useState<Trail | null>(null)
   const [poiCount, setPoiCount] = useState(0)
@@ -127,6 +127,7 @@ export function CaptureScreen() {
       setPreviewUrl('')
       stopCamera()
       setCaptureState('idle')
+      clearPosition()
 
       setTimeout(() => setSuccessMessage(null), 1500)
       await loadTrailState()
