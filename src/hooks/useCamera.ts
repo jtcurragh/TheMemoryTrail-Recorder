@@ -34,13 +34,12 @@ export function useCamera(): UseCameraReturn {
     try {
       setError(null)
       let stream: MediaStream
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
+          video: isIOS
+            ? { facingMode: 'environment' }
+            : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         })
       } catch {
