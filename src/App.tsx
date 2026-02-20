@@ -6,6 +6,7 @@ import { CaptureScreen } from './screens/CaptureScreen'
 import { TrailScreen } from './screens/TrailScreen'
 import { POIDetailScreen } from './screens/POIDetailScreen'
 import { ExportScreen } from './screens/ExportScreen'
+import { BrochureSetupScreen } from './screens/BrochureSetupScreen'
 
 const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { path: 'trail', element: <TrailScreen /> },
       { path: 'trail/poi/:poiId', element: <POIDetailScreen /> },
       { path: 'export', element: <ExportScreen /> },
+      { path: 'brochure-setup', element: <BrochureSetupScreen /> },
     ],
   },
 ])

@@ -104,3 +104,15 @@ export interface UpdatePOIInput {
   condition?: POICondition
   notes?: string
 }
+
+export interface BrochureSetup {
+  id: string
+  trailId: string
+  coverTitle: string
+  coverPhotoBlob: Blob | null
+  groupName: string
+  creditsText: string
+  introText: string
+  funderLogos: Blob[]
+  updatedAt: string
+}

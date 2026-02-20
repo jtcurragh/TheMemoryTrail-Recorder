@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getUserProfile } from '../db/userProfile'
 import { getTrailsByGroupCode } from '../db/trails'
 import { getPOIsByTrailId } from '../db/pois'
+import { getBrochureSetup } from '../db/brochureSetup'
 import { db } from '../db/database'
 import { exportTrailsToZip, downloadBlob } from '../utils/export'
-import type { UserProfile } from '../types'
+import type { UserProfile, Trail } from '../types'
 
 function clearAllData(): void {
   localStorage.removeItem('userSetupComplete')
@@ -12,13 +14,20 @@ function clearAllData(): void {
   void db.userProfile.clear()
   void db.trails.clear()
   void db.pois.clear()
+  void db.brochureSetup.clear()
   window.location.reload()
 }
 
 export function ExportScreen() {
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [graveyardTrail, setGraveyardTrail] = useState<Trail | null>(null)
+  const [parishTrail, setParishTrail] = useState<Trail | null>(null)
   const [graveyardCount, setGraveyardCount] = useState(0)
   const [parishCount, setParishCount] = useState(0)
+  const [brochureTrailId, setBrochureTrailId] = useState<string | null>(null)
+  const [brochureSetupComplete, setBrochureSetupComplete] = useState(false)
+  const [validatedPoiCount, setValidatedPoiCount] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [exportSuccess, setExportSuccess] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -33,6 +42,10 @@ export function ExportScreen() {
       const graveyard = trails.find((t) => t.trailType === 'graveyard')
       const parish = trails.find((t) => t.trailType === 'parish')
 
+      setGraveyardTrail(graveyard ?? null)
+      setParishTrail(parish ?? null)
+      setBrochureTrailId((prev) => prev ?? graveyard?.id ?? parish?.id ?? null)
+
       if (graveyard) {
         const pois = await getPOIsByTrailId(graveyard.id, { includeBlobs: false })
         setGraveyardCount(pois.length)
@@ -44,6 +57,27 @@ export function ExportScreen() {
     }
     load()
   }, [])
+
+  useEffect(() => {
+    if (!brochureTrailId) return
+    async function loadBrochureState() {
+      const [setup, pois] = await Promise.all([
+        getBrochureSetup(brochureTrailId!),
+        getPOIsByTrailId(brochureTrailId!, { includeBlobs: false }),
+      ])
+      setBrochureSetupComplete(
+        !!(
+          setup &&
+          setup.coverTitle &&
+          setup.groupName &&
+          setup.introText &&
+          setup.coverPhotoBlob
+        )
+      )
+      setValidatedPoiCount(pois.filter((p) => p.completed).length)
+    }
+    loadBrochureState()
+  }, [brochureTrailId])
 
   const handleExport = async () => {
     if (!profile) return
@@ -122,6 +156,105 @@ export function ExportScreen() {
           </p>
         )}
       </div>
+
+      <section className="mt-8 pt-8 border-t-2 border-govuk-border">
+        <h2 className="text-lg font-bold text-govuk-text mb-4">
+          Digital Brochure
+        </h2>
+        {brochureTrailId && (graveyardTrail || parishTrail) && (
+          <>
+            <div className="mb-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setBrochureTrailId(graveyardTrail?.id ?? null)}
+                aria-pressed={brochureTrailId === graveyardTrail?.id}
+                className={`min-h-[48px] px-4 font-bold border-2 ${
+                  brochureTrailId === graveyardTrail?.id
+                    ? 'bg-tmt-teal border-tmt-teal text-white'
+                    : 'bg-white border-govuk-border text-govuk-text'
+                }`}
+              >
+                Graveyard Trail
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrochureTrailId(parishTrail?.id ?? null)}
+                aria-pressed={brochureTrailId === parishTrail?.id}
+                className={`min-h-[48px] px-4 font-bold border-2 ${
+                  brochureTrailId === parishTrail?.id
+                    ? 'bg-tmt-teal border-tmt-teal text-white'
+                    : 'bg-white border-govuk-border text-govuk-text'
+                }`}
+              >
+                Parish Trail
+              </button>
+            </div>
+            {!brochureSetupComplete ? (
+              <div
+                className="mb-4 pl-4 border-l-4 border-tmt-teal bg-govuk-background py-3 pr-4"
+                role="region"
+              >
+                <p className="text-govuk-text mb-3">
+                  Brochure setup required before you can generate a PDF.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate('/brochure-setup', { state: { trailId: brochureTrailId } })
+                  }
+                  className="min-h-[48px] px-6 bg-tmt-teal text-white font-bold"
+                >
+                  Set Up Brochure
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 flex items-center gap-2">
+                <span
+                  className="text-govuk-green font-bold"
+                  aria-label="Brochure setup complete"
+                >
+                  ✓ Brochure setup complete
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate('/brochure-setup', { state: { trailId: brochureTrailId } })
+                  }
+                  className="text-tmt-teal font-bold underline"
+                >
+                  Edit Setup
+                </button>
+              </div>
+            )}
+            <p
+              className={`mb-4 font-bold ${
+                validatedPoiCount >= 8 ? 'text-govuk-green' : 'text-[#b45309]'
+              }`}
+            >
+              {validatedPoiCount >= 8
+                ? `${validatedPoiCount} of 12 POIs validated — ready to generate brochure`
+                : `${validatedPoiCount} of 12 POIs validated — 8 required to generate brochure`}
+            </p>
+            <button
+              type="button"
+              disabled={!brochureSetupComplete || validatedPoiCount < 8}
+              aria-label={
+                !brochureSetupComplete || validatedPoiCount < 8
+                  ? 'Complete brochure setup and validate at least 8 POIs to enable'
+                  : 'Generate digital brochure PDF'
+              }
+              className="min-h-[56px] w-full px-6 bg-tmt-teal text-white font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Generate Digital Brochure (PDF)
+            </button>
+            {(!brochureSetupComplete || validatedPoiCount < 8) && (
+              <p className="mt-2 text-govuk-muted text-sm">
+                Complete brochure setup and validate at least 8 POIs to enable
+              </p>
+            )}
+          </>
+        )}
+      </section>
 
       <section className="mt-8 pt-8 border-t-2 border-govuk-border">
         <h2 className="text-lg font-bold text-govuk-text mb-2">

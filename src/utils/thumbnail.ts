@@ -25,7 +25,7 @@ export async function generateThumbnail(jpegBlob: Blob): Promise<Blob> {
       ctx.drawImage(bitmap, 0, 0, w, h)
       bitmap.close()
       return canvas.convertToBlob({ type: 'image/jpeg', quality })
-    } catch (err) {
+    } catch {
       // Fall through to Image path
     }
   }

@@ -36,7 +36,9 @@ export function TrailScreen() {
   }, [activeTrailId])
 
   useEffect(() => {
-    void loadTrailState()
+    queueMicrotask(() => {
+      void loadTrailState()
+    })
   }, [loadTrailState])
 
   const handleReorder = useCallback(
