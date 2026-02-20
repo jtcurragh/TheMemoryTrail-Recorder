@@ -127,7 +127,6 @@ export function CaptureScreen() {
       setPreviewUrl('')
       stopCamera()
       setCaptureState('idle')
-      clearPosition()
 
       setTimeout(() => setSuccessMessage(null), 1500)
       await loadTrailState()
@@ -136,6 +135,7 @@ export function CaptureScreen() {
     } finally {
       savingRef.current = false
       setSaving(false)
+      clearPosition()
     }
   }
 

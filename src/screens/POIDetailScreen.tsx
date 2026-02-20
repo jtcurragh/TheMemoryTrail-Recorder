@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getPOIById } from '../db/pois'
-import type { POIRecord } from '../types'
+import { getPOIById, updatePOI } from '../db/pois'
+import type { POIRecord, POICategory } from '../types'
 
 function PhotoImage({ blob, alt }: { blob: Blob; alt: string }) {
   const [src, setSrc] = useState<string | null>(null)
@@ -31,11 +31,28 @@ export function POIDetailScreen() {
   const { poiId } = useParams<{ poiId: string }>()
   const navigate = useNavigate()
   const [poi, setPoi] = useState<POIRecord | null>(null)
+  const [siteName, setSiteName] = useState('')
+  const [category, setCategory] = useState<POICategory>('Other')
+  const [description, setDescription] = useState('')
+  const [story, setStory] = useState('')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!poiId) return
     getPOIById(poiId, { includeBlobs: true }).then((p) => setPoi(p ?? null))
   }, [poiId])
+
+  useEffect(() => {
+    if (poi) {
+      setSiteName(poi.siteName)
+      setCategory(poi.category)
+      setDescription(poi.description)
+      setStory(poi.story)
+      setNotes(poi.notes)
+    }
+  }, [poi])
 
   if (!poiId) {
     return (
@@ -66,6 +83,37 @@ export function POIDetailScreen() {
     !Number.isNaN(poi.latitude) &&
     !Number.isNaN(poi.longitude)
 
+  const handleSave = async () => {
+    setSaving(true)
+    setSaved(false)
+    try {
+      await updatePOI(poi.id, {
+        siteName,
+        category,
+        description,
+        story,
+        notes,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      console.error('Failed to save:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const categories: POICategory[] = [
+    'Monument',
+    'Vernacular Building',
+    'Holy Well',
+    'Famine Site',
+    'Historic Feature',
+    'Natural Feature',
+    'Grave',
+    'Other',
+  ]
+
   return (
     <main className="min-h-screen bg-white p-6 pb-24">
       <button
@@ -77,61 +125,132 @@ export function POIDetailScreen() {
         ← Back to Trail
       </button>
 
-      <PhotoImage blob={poi.photoBlob} alt={poi.siteName || poi.filename} />
+      <PhotoImage blob={poi.photoBlob} alt={siteName || poi.filename} />
 
-      <div className="mt-4 space-y-3">
-        <div>
-          <span className="text-govuk-muted text-sm font-bold">Sequence</span>
-          <p className="text-lg">{poi.sequence}</p>
-        </div>
-        <div>
-          <span className="text-govuk-muted text-sm font-bold">Filename</span>
-          <p className="text-lg font-mono break-all">{poi.filename}</p>
-        </div>
+      <div className="mt-4 space-y-1 text-govuk-muted text-sm">
+        <p>
+          <span className="font-bold">File:</span> {poi.filename}
+        </p>
         {hasGps && (
-          <div>
-            <span className="text-govuk-muted text-sm font-bold">GPS</span>
-            <p className="text-lg">
-              {formatGps(poi.latitude!, poi.longitude!, poi.accuracy)}
-            </p>
-          </div>
-        )}
-        {poi.siteName && (
-          <div>
-            <span className="text-govuk-muted text-sm font-bold">Site name</span>
-            <p className="text-lg">{poi.siteName}</p>
-          </div>
-        )}
-        {poi.category && poi.category !== 'Other' && (
-          <div>
-            <span className="text-govuk-muted text-sm font-bold">Category</span>
-            <p className="text-lg">{poi.category}</p>
-          </div>
-        )}
-        {poi.description && (
-          <div>
-            <span className="text-govuk-muted text-sm font-bold">
-              Description
-            </span>
-            <p className="text-lg">{poi.description}</p>
-          </div>
-        )}
-        {poi.story && (
-          <div>
-            <span className="text-govuk-muted text-sm font-bold">Story</span>
-            <p className="text-lg whitespace-pre-wrap">{poi.story}</p>
-          </div>
-        )}
-        {poi.notes && (
-          <div>
-            <span className="text-govuk-muted text-sm font-bold">Notes</span>
-            <p className="text-lg whitespace-pre-wrap">{poi.notes}</p>
-          </div>
+          <p>
+            <span className="font-bold">GPS:</span>{' '}
+            {formatGps(poi.latitude!, poi.longitude!, poi.accuracy)}
+          </p>
         )}
       </div>
 
-      <p className="mt-6 text-govuk-muted text-sm">
-        Use this screen as reference when writing your story in Word.
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void handleSave()
+        }}
+        className="mt-6 space-y-4"
+      >
+        <div>
+          <label
+            htmlFor="siteName"
+            className="block text-lg font-bold text-govuk-text mb-2"
+          >
+            Site name (title)
+          </label>
+          <input
+            id="siteName"
+            type="text"
+            value={siteName}
+            onChange={(e) => setSiteName(e.target.value)}
+            placeholder="e.g. O'Connell memorial cross"
+            className="block w-full min-h-[48px] px-4 py-3 text-lg border-2 border-govuk-border rounded-none"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="category"
+            className="block text-lg font-bold text-govuk-text mb-2"
+          >
+            Category
+          </label>
+          <select
+            id="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as POICategory)}
+            className="block w-full min-h-[48px] px-4 py-3 text-lg border-2 border-govuk-border rounded-none"
+          >
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="description"
+            className="block text-lg font-bold text-govuk-text mb-2"
+          >
+            Brief description
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="One or two sentences about this place"
+            rows={3}
+            className="block w-full px-4 py-3 text-lg border-2 border-govuk-border rounded-none resize-y"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="story"
+            className="block text-lg font-bold text-govuk-text mb-2"
+          >
+            Story (100–200 words)
+          </label>
+          <textarea
+            id="story"
+            value={story}
+            onChange={(e) => setStory(e.target.value)}
+            placeholder="Add your longer story here. Or write it in Word and add it when you export."
+            rows={8}
+            className="block w-full px-4 py-3 text-lg border-2 border-govuk-border rounded-none resize-y"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="notes"
+            className="block text-lg font-bold text-govuk-text mb-2"
+          >
+            Notes
+          </label>
+          <textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Any other observations"
+            rows={2}
+            className="block w-full px-4 py-3 text-lg border-2 border-govuk-border rounded-none resize-y"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="min-h-[56px] w-full bg-govuk-green text-white font-bold text-lg disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+        {saved && (
+          <p className="text-govuk-green font-bold" role="status">
+            Saved
+          </p>
+        )}
+      </form>
+
+      <p className="mt-4 text-govuk-muted text-sm">
+        You can also write your story in Word and add it when you export.
       </p>
     </main>
   )
