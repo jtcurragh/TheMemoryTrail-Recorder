@@ -1,10 +1,14 @@
-const THUMBNAIL_MAX_SIZE = 200
+function getThumbnailSettings(): { maxSize: number; quality: number } {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  return isIOS ? { maxSize: 120, quality: 0.6 } : { maxSize: 200, quality: 0.8 }
+}
 
 /**
  * Generate a smaller preview Blob from a full JPEG Blob.
- * Uses canvas to resize - max 200px on long edge for grid display.
+ * Uses canvas to resize for grid display. More conservative on iOS for stability.
  */
 export async function generateThumbnail(jpegBlob: Blob): Promise<Blob> {
+  const { maxSize, quality } = getThumbnailSettings()
   return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(jpegBlob)
@@ -12,7 +16,7 @@ export async function generateThumbnail(jpegBlob: Blob): Promise<Blob> {
     img.onload = () => {
       URL.revokeObjectURL(url)
       const { width, height } = img
-      const scale = Math.min(1, THUMBNAIL_MAX_SIZE / Math.max(width, height))
+      const scale = Math.min(1, maxSize / Math.max(width, height))
       const w = Math.round(width * scale)
       const h = Math.round(height * scale)
 
@@ -31,7 +35,7 @@ export async function generateThumbnail(jpegBlob: Blob): Promise<Blob> {
           resolve(blob ?? jpegBlob)
         },
         'image/jpeg',
-        0.8
+        quality
       )
     }
     img.onerror = () => {

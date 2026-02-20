@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-const MAX_CAPTURE_DIMENSION = 1920
+function getMaxCaptureDimension(): number {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  return isIOS ? 1280 : 1920
+}
 
 interface UseCameraReturn {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -97,10 +100,11 @@ export function useCamera(): UseCameraReturn {
       }
       const canvas = canvasRef.current
 
+      const maxDim = getMaxCaptureDimension()
       let w = video.videoWidth
       let h = video.videoHeight
-      if (w > MAX_CAPTURE_DIMENSION || h > MAX_CAPTURE_DIMENSION) {
-        const scale = MAX_CAPTURE_DIMENSION / Math.max(w, h)
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h)
         w = Math.round(w * scale)
         h = Math.round(h * scale)
       }
@@ -114,10 +118,11 @@ export function useCamera(): UseCameraReturn {
       }
       ctx.drawImage(video, 0, 0, w, h)
 
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
       canvas.toBlob(
         (blob) => resolve(blob ?? null),
         'image/jpeg',
-        0.85,
+        isIOS ? 0.75 : 0.85,
       )
     })
   }, [isReady])

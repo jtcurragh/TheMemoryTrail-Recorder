@@ -96,7 +96,8 @@ export function CaptureScreen() {
     setSaving(true)
     try {
       let photoBlob = capturedBlob
-      if (latitude !== null && longitude !== null) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      if (latitude !== null && longitude !== null && !isIOS) {
         photoBlob = await embedGpsInJpeg(capturedBlob, latitude, longitude)
       }
 
@@ -106,6 +107,7 @@ export function CaptureScreen() {
       } catch {
         thumbnailBlob = photoBlob
       }
+      await new Promise((r) => requestAnimationFrame(r))
       const sequence = trail.nextSequence
       const poiId = generatePOIId(trail.groupCode, trail.trailType, sequence)
       const filename = generateFilename(poiId)
