@@ -96,7 +96,7 @@ export async function createPOI(input: CreatePOIInput): Promise<POIRecord> {
     photoBlob: photoBuf,
     thumbnailBlob: thumbBuf,
   }
-  await db.pois.add(recordForDb)
+  await db.pois.add(recordForDb as unknown as POIRecord)
   return poi
 }
 
