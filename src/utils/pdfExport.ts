@@ -5,14 +5,12 @@ import {
   type PDFImage,
 } from 'pdf-lib'
 import type { Trail, POIRecord, BrochureSetup } from '../types'
-import { generateQrDataUrl } from './qrCode'
 
 const A6_WIDTH = 297.64
 const A6_HEIGHT = 419.53
 const TEAL = rgb(58 / 255, 155 / 255, 142 / 255)
 const NEAR_BLACK = rgb(11 / 255, 12 / 255, 12 / 255)
 const WHITE = rgb(1, 1, 1)
-const RED_URL = rgb(192 / 255, 57 / 255, 43 / 255)
 const PLACEHOLDER_URL = 'https://thememorytrail.ie'
 
 async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
@@ -306,11 +304,11 @@ export async function generateBrochurePdf(
       color: rgb(0.7, 0.7, 0.7),
     })
 
-    // Story text section (more space for text)
+    // Story text section (digital-only: maximum space for text)
     const storyStartY = dividerY - 20
-    const storyEndY = 135 // Leave room for QR code (starts at y=115, is 50pt tall, top edge at 165)
+    const storyEndY = 50 // Digital PDF: no QR code needed, leave minimal space for URL
     const bodyText = poi.story || ''
-    const maxLen = 800 // Increased from 600
+    const maxLen = 1200 // Digital format allows more text
     const bodyChunk = bodyText.length > maxLen
       ? bodyText.substring(0, maxLen) + '...'
       : bodyText
@@ -334,8 +332,8 @@ export async function generateBrochurePdf(
       by -= 14
     }
 
-    // Thin divider line above QR section
-    const divider2Y = 130
+    // Thin divider line above URL section
+    const divider2Y = 45
     poiPage.drawRectangle({
       x: 20,
       y: divider2Y,
@@ -344,54 +342,28 @@ export async function generateBrochurePdf(
       color: rgb(0.7, 0.7, 0.7),
     })
 
-    // QR code centered at bottom (smaller size to fit better)
-    const qrUrl = poi.url?.trim() || PLACEHOLDER_URL
-    const qrDataUrl = await generateQrDataUrl(qrUrl)
-    const qrImg = await doc.embedPng(qrDataUrl)
-    const qrSize = 50
-    const qrX = (A6_WIDTH - qrSize) / 2
-    const qrY = 65
+    // Simple URL display at bottom (digital PDF - no QR code needed)
+    const urlDisplay = poi.url?.trim() || PLACEHOLDER_URL
+    const urlText = urlDisplay.length > 35 ? urlDisplay.substring(0, 32) + '...' : urlDisplay
+    const urlTextWidth = helvetica.widthOfTextAtSize(urlText, 9)
     
-    poiPage.drawImage(qrImg, {
-      x: qrX,
-      y: qrY,
-      width: qrSize,
-      height: qrSize,
+    poiPage.drawText(urlText, {
+      x: (A6_WIDTH - urlTextWidth) / 2,
+      y: 30,
+      size: 9,
+      font: helvetica,
+      color: rgb(0.2, 0.4, 0.6), // Blue link color
     })
     
-    // "Scan QR Code" label below QR
-    const qrLabel = 'Scan QR Code'
-    const qrLabelWidth = helvetica.widthOfTextAtSize(qrLabel, 8)
-    poiPage.drawText(qrLabel, {
-      x: (A6_WIDTH - qrLabelWidth) / 2,
-      y: qrY - 10,
+    // "Tap to visit" label above URL
+    const tapLabel = 'Tap to visit:'
+    const tapLabelWidth = helvetica.widthOfTextAtSize(tapLabel, 8)
+    poiPage.drawText(tapLabel, {
+      x: (A6_WIDTH - tapLabelWidth) / 2,
+      y: 42,
       size: 8,
       font: helvetica,
       color: rgb(0.4, 0.4, 0.4),
-    })
-
-    // Red URL box below QR label
-    const urlDisplay = poi.url && poi.url.length > 30 ? 'Visit website' : (poi.url || 'Visit website')
-    const urlBoxWidth = 100
-    const urlBoxHeight = 22
-    const urlBoxX = (A6_WIDTH - urlBoxWidth) / 2
-    const urlBoxY = 25
-    
-    poiPage.drawRectangle({
-      x: urlBoxX,
-      y: urlBoxY,
-      width: urlBoxWidth,
-      height: urlBoxHeight,
-      color: RED_URL,
-    })
-    
-    const urlTextWidth = helvetica.widthOfTextAtSize(urlDisplay.substring(0, 15), 9)
-    poiPage.drawText(urlDisplay.substring(0, 15), {
-      x: urlBoxX + (urlBoxWidth - urlTextWidth) / 2,
-      y: urlBoxY + 7,
-      size: 9,
-      font: helvetica,
-      color: WHITE,
     })
   }
 
