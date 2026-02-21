@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getPOIById, updatePOI } from '../db/pois'
+import { getPOIById, updatePOI, getPOIsByTrailId } from '../db/pois'
 import type { POIRecord, POICategory } from '../types'
 
 function PhotoImage({ blob, alt }: { blob: Blob; alt: string }) {
@@ -31,6 +31,7 @@ export function POIDetailScreen() {
   const { poiId } = useParams<{ poiId: string }>()
   const navigate = useNavigate()
   const [poi, setPoi] = useState<POIRecord | null>(null)
+  const [trailPois, setTrailPois] = useState<POIRecord[]>([])
   const [siteName, setSiteName] = useState('')
   const [category, setCategory] = useState<POICategory>('Other')
   const [story, setStory] = useState('')
@@ -41,7 +42,14 @@ export function POIDetailScreen() {
 
   useEffect(() => {
     if (!poiId) return
-    getPOIById(poiId, { includeBlobs: true }).then((p) => setPoi(p ?? null))
+    getPOIById(poiId, { includeBlobs: true }).then((p) => {
+      setPoi(p ?? null)
+      if (p) {
+        getPOIsByTrailId(p.trailId, { includeBlobs: false }).then((pois) => {
+          setTrailPois(pois.sort((a, b) => a.sequence - b.sequence))
+        })
+      }
+    })
   }, [poiId])
 
   useEffect(() => {
@@ -53,6 +61,46 @@ export function POIDetailScreen() {
       setNotes(poi.notes)
     }
   }, [poi])
+
+  const handleSave = useCallback(async () => {
+    if (!poi) return
+    setSaving(true)
+    setSaved(false)
+    try {
+      await updatePOI(poi.id, {
+        siteName,
+        category,
+        story,
+        url,
+        notes,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      console.error('Failed to save:', err)
+    } finally {
+      setSaving(false)
+    }
+  }, [poi, siteName, category, story, url, notes])
+
+  const handleNavigate = useCallback(
+    async (direction: 'prev' | 'next') => {
+      if (!poi || trailPois.length === 0) return
+      await handleSave()
+      const currentIdx = trailPois.findIndex((p) => p.id === poi.id)
+      if (currentIdx < 0) return
+      const newIdx = direction === 'prev' ? currentIdx - 1 : currentIdx + 1
+      if (newIdx < 0 || newIdx >= trailPois.length) return
+      navigate(`/trail/poi/${trailPois[newIdx].id}`)
+    },
+    [poi, trailPois, navigate, handleSave]
+  )
+
+  const currentIndex = poi && trailPois.length > 0 
+    ? trailPois.findIndex((p) => p.id === poi.id) 
+    : -1
+  const hasPrevious = currentIndex > 0
+  const hasNext = currentIndex >= 0 && currentIndex < trailPois.length - 1
 
   if (!poiId) {
     return (
@@ -82,26 +130,6 @@ export function POIDetailScreen() {
     poi.longitude != null &&
     !Number.isNaN(poi.latitude) &&
     !Number.isNaN(poi.longitude)
-
-  const handleSave = async () => {
-    setSaving(true)
-    setSaved(false)
-    try {
-      await updatePOI(poi.id, {
-        siteName,
-        category,
-        story,
-        url,
-        notes,
-      })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (err) {
-      console.error('Failed to save:', err)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const categories: POICategory[] = [
     'Monument',
@@ -142,6 +170,32 @@ export function POIDetailScreen() {
       >
         ← Back to Trail
       </button>
+
+      {trailPois.length > 1 && (
+        <div className="mb-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleNavigate('prev')}
+            disabled={!hasPrevious || saving}
+            className="flex-1 min-h-[48px] px-4 border-2 border-govuk-border bg-white text-govuk-text font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-govuk-background focus:outline-none focus:ring-2 focus:ring-tmt-focus"
+            aria-label="Previous POI"
+          >
+            ← Previous
+          </button>
+          <span className="text-govuk-muted text-sm whitespace-nowrap">
+            {currentIndex + 1} of {trailPois.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleNavigate('next')}
+            disabled={!hasNext || saving}
+            className="flex-1 min-h-[48px] px-4 border-2 border-govuk-border bg-white text-govuk-text font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-govuk-background focus:outline-none focus:ring-2 focus:ring-tmt-focus"
+            aria-label="Next POI"
+          >
+            Next →
+          </button>
+        </div>
+      )}
 
       <PhotoImage blob={poi.photoBlob} alt={siteName || poi.filename} />
 
