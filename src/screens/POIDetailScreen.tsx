@@ -10,12 +10,12 @@ function PhotoImage({ blob, alt }: { blob: Blob; alt: string }) {
     queueMicrotask(() => setSrc(url))
     return () => URL.revokeObjectURL(url)
   }, [blob])
-  if (!src) return <div className="w-full aspect-[4/3] bg-govuk-background animate-pulse" />
+  if (!src) return <div className="w-full max-h-48 bg-govuk-background animate-pulse" />
   return (
     <img
       src={src}
       alt={alt}
-      className="w-full aspect-[4/3] object-contain bg-govuk-background"
+      className="w-full max-h-48 object-contain bg-govuk-background"
     />
   )
 }
