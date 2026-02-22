@@ -385,9 +385,12 @@ export async function generateBrochurePdf(
   })
 
   // If map blob exists, embed it; otherwise show coordinates list
+  console.log('[PDF] Map blob in setup:', setup.mapBlob ? `${setup.mapBlob.size} bytes` : 'null')
   if (setup.mapBlob) {
     try {
+      console.log('[PDF] Attempting to embed map image...')
       const mapImg = await embedImage(doc, setup.mapBlob)
+      console.log('[PDF] Map image embedded:', mapImg.width, 'x', mapImg.height)
       const mapAreaHeight = A6_HEIGHT - mapHeaderH - 40
       const mapScale = Math.min(
         (A6_WIDTH - 40) / mapImg.width,
@@ -404,10 +407,13 @@ export async function generateBrochurePdf(
         width: mapW,
         height: mapH,
       })
+      console.log('[PDF] Map image drawn successfully')
     } catch (err) {
       console.error('Failed to embed map image:', err)
       // Fall through to coordinates list
     }
+  } else {
+    console.log('[PDF] No map blob - skipping map embed')
   }
 
   // Add coordinates list at bottom

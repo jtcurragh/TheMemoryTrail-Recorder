@@ -142,7 +142,9 @@ export function BrochureSetupScreen() {
     try {
       // Fetch POIs and generate map
       const pois = await getPOIsByTrailId(trailId, { includeBlobs: false })
+      console.log('[BrochureSetup] Found POIs:', pois.length)
       const mapBlob = await generateStaticMap(pois)
+      console.log('[BrochureSetup] Generated map blob:', mapBlob ? `${mapBlob.size} bytes` : 'null')
       
       const setup: BrochureSetup = {
         id: trailId,
@@ -157,6 +159,7 @@ export function BrochureSetupScreen() {
         updatedAt: new Date().toISOString(),
       }
       await saveBrochureSetup(setup)
+      console.log('[BrochureSetup] Saved brochure setup with map blob')
       setSaved(true)
       setTimeout(() => {
         setSaved(false)
