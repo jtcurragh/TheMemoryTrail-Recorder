@@ -188,10 +188,10 @@ export function ExportScreen() {
           type="button"
           onClick={handleExport}
           disabled={!hasData || exporting}
-          className={`min-h-[56px] w-full px-6 border-2 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`min-h-[56px] w-full px-6 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed ${
             exportSuccess
-              ? 'bg-govuk-green border-govuk-green text-white'
-              : 'bg-white border-govuk-border text-govuk-text'
+              ? 'bg-govuk-green text-white'
+              : 'bg-tmt-teal text-white'
           }`}
         >
           {exporting ? 'Creating ZIP...' : exportSuccess ? 'Export downloaded!' : 'Export (ZIP)'}

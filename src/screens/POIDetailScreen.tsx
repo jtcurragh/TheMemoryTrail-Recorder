@@ -237,23 +237,32 @@ export function POIDetailScreen() {
 
         <div>
           <label
-            htmlFor="category"
+            id="category-label"
             className="block text-lg font-bold text-govuk-text mb-2"
           >
             Category <span className="text-govuk-red">*</span>
           </label>
-          <select
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value as POICategory)}
-            className="block w-full min-h-[48px] px-4 py-3 text-lg border-2 border-govuk-border rounded-none"
+          <div
+            role="group"
+            aria-labelledby="category-label"
+            className="flex flex-wrap gap-2"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(c)}
+                aria-pressed={category === c}
+                className={`min-h-[48px] px-4 py-2 font-bold border-2 ${
+                  category === c
+                    ? 'bg-tmt-teal border-tmt-teal text-white'
+                    : 'bg-white border-govuk-border text-govuk-text'
+                }`}
+              >
                 {c}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
         <div>
@@ -313,10 +322,10 @@ export function POIDetailScreen() {
         <button
           type="submit"
           disabled={saving}
-          className={`min-h-[56px] w-full border-2 font-bold text-lg disabled:opacity-50 ${
+          className={`min-h-[56px] w-full font-bold text-lg disabled:opacity-50 ${
             saved
-              ? 'bg-govuk-green border-govuk-green text-white'
-              : 'bg-white border-govuk-border text-govuk-text'
+              ? 'bg-govuk-green text-white'
+              : 'bg-tmt-teal text-white'
           }`}
         >
           {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
