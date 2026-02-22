@@ -114,5 +114,6 @@ export interface BrochureSetup {
   creditsText: string
   introText: string
   funderLogos: Blob[]
+  mapBlob: Blob | null
   updatedAt: string
 }

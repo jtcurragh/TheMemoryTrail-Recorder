@@ -1,4 +1,5 @@
 import type { BrochureSetup, POIRecord } from '../types'
+import { generateDemoStaticMap } from './mapbox'
 
 /**
  * Generate a placeholder image blob with text overlay
@@ -69,6 +70,9 @@ export async function generateDemoBrochureSetup(): Promise<BrochureSetup> {
   const logo1 = await createPlaceholderImage('LOGO 1', '#4a5568', 200, 200)
   const logo2 = await createPlaceholderImage('LOGO 2', '#718096', 200, 200)
 
+  // Generate static map for demo
+  const mapBlob = await generateDemoStaticMap()
+
   return {
     id: 'demo',
     trailId: 'demo',
@@ -78,6 +82,7 @@ export async function generateDemoBrochureSetup(): Promise<BrochureSetup> {
     creditsText: `This demonstration brochure has been created by The Memory Trail team to showcase the digital heritage trail format.\n\nAcknowledgements: Local historians, community volunteers, and heritage enthusiasts who contribute to preserving our shared heritage.\n\nFunding support provided by heritage councils and community development programmes.`,
     introText: 'Welcome to this demonstration heritage trail. This sample brochure showcases how communities can document and share their local heritage using The Memory Trail app. Each Point of Interest represents a significant site in the local landscape, from ancient monuments to more recent historical features. Together, these sites tell the story of human activity and settlement patterns spanning thousands of years.',
     funderLogos: [logo1, logo2],
+    mapBlob,
     updatedAt: new Date().toISOString(),
   }
 }

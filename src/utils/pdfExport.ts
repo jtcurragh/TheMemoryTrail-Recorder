@@ -383,49 +383,62 @@ export async function generateBrochurePdf(
     font: helveticaBold,
     color: WHITE,
   })
-  mapPage.drawText('Map to be added here.', {
-    x: A6_WIDTH / 2 - helvetica.widthOfTextAtSize('Map to be added here.', 12) / 2,
-    y: A6_HEIGHT - mapHeaderH - 40,
-    size: 12,
-    font: helvetica,
-    color: NEAR_BLACK,
-  })
-  mapPage.drawText(
-    'GPS coordinates for all POIs are included in your exported ZIP file.',
-    {
-      x: 20,
-      y: A6_HEIGHT - mapHeaderH - 60,
-      size: 10,
-      font: helvetica,
-      color: NEAR_BLACK,
-    }
-  )
-  let coordY = A6_HEIGHT - mapHeaderH - 100
-  for (const poi of validatedPois) {
-    if (poi.latitude != null && poi.longitude != null && coordY > 50) {
-      const ns = poi.latitude >= 0 ? 'N' : 'S'
-      const ew = poi.longitude >= 0 ? 'E' : 'W'
-      const line = `${poi.sequence}. ${poi.siteName || poi.filename} — ${Math.abs(poi.latitude).toFixed(4)}° ${ns}, ${Math.abs(poi.longitude).toFixed(4)}° ${ew}`
-      mapPage.drawText(line.substring(0, 70), {
-        x: 20,
-        y: coordY,
-        size: 9,
-        font: helvetica,
-        color: NEAR_BLACK,
+
+  // If map blob exists, embed it; otherwise show coordinates list
+  if (setup.mapBlob) {
+    try {
+      const mapImg = await embedImage(doc, setup.mapBlob)
+      const mapAreaHeight = A6_HEIGHT - mapHeaderH - 40
+      const mapScale = Math.min(
+        (A6_WIDTH - 40) / mapImg.width,
+        mapAreaHeight / mapImg.height
+      )
+      const mapW = mapImg.width * mapScale
+      const mapH = mapImg.height * mapScale
+      const mapX = (A6_WIDTH - mapW) / 2
+      const mapY = A6_HEIGHT - mapHeaderH - 20 - mapH
+
+      mapPage.drawImage(mapImg, {
+        x: mapX,
+        y: mapY,
+        width: mapW,
+        height: mapH,
       })
-      coordY -= 14
+    } catch (err) {
+      console.error('Failed to embed map image:', err)
+      // Fall through to coordinates list
     }
   }
-  mapPage.drawText(
-    'Use the ZIP export to generate a map using Google Maps or QGIS',
-    {
-      x: 20,
-      y: 30,
-      size: 8,
-      font: helvetica,
-      color: rgb(0.5, 0.5, 0.5),
+
+  // Add coordinates list at bottom
+  let coordY = 60
+  for (const poi of validatedPois.slice(0, 3)) { // Show first 3 for space
+    if (poi.latitude != null && poi.longitude != null && coordY > 20) {
+      const ns = poi.latitude >= 0 ? 'N' : 'S'
+      const ew = poi.longitude >= 0 ? 'E' : 'W'
+      const line = `${poi.sequence}. ${Math.abs(poi.latitude).toFixed(4)}° ${ns}, ${Math.abs(poi.longitude).toFixed(4)}° ${ew}`
+      mapPage.drawText(line, {
+        x: 20,
+        y: coordY,
+        size: 8,
+        font: helvetica,
+        color: rgb(0.5, 0.5, 0.5),
+      })
+      coordY -= 12
     }
-  )
+  }
+  if (validatedPois.length > 3) {
+    mapPage.drawText(
+      'Full GPS coordinates included in ZIP export',
+      {
+        x: 20,
+        y: coordY - 2,
+        size: 7,
+        font: helvetica,
+        color: rgb(0.5, 0.5, 0.5),
+      }
+    )
+  }
 
   const pdfBytes = await doc.save()
   return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
