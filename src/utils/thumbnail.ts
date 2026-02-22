@@ -62,3 +62,54 @@ export async function generateThumbnail(jpegBlob: Blob): Promise<Blob> {
     img.src = url
   })
 }
+
+/**
+ * Process an image to fix EXIF orientation issues.
+ * Uses createImageBitmap which automatically handles EXIF orientation.
+ * Returns a properly oriented JPEG blob at full resolution.
+ */
+export async function fixOrientation(imageBlob: Blob): Promise<Blob> {
+  if (typeof createImageBitmap === 'function' && typeof OffscreenCanvas !== 'undefined') {
+    try {
+      const bitmap = await createImageBitmap(imageBlob)
+      const { width, height } = bitmap
+      const canvas = new OffscreenCanvas(width, height)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Could not get canvas context')
+      ctx.drawImage(bitmap, 0, 0, width, height)
+      bitmap.close()
+      return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 })
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fallback: Image + blob URL
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(imageBlob)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const { width, height } = img
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => resolve(blob ?? imageBlob),
+        'image/jpeg',
+        0.92
+      )
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image'))
+    }
+    img.src = url
+  })
+}
