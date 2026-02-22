@@ -74,6 +74,15 @@ export async function generateBrochurePdf(
       color: TEAL,
       opacity: 0.7,
     })
+
+    // "The Memory Trail" branding at top for photo covers
+    page1.drawText('The Memory Trail', {
+      x: 20,
+      y: A6_HEIGHT - 30,
+      size: 10,
+      font: helvetica,
+      color: WHITE,
+    })
   } else {
     // Text-only cover with solid teal background
     page1.drawRectangle({
@@ -83,15 +92,18 @@ export async function generateBrochurePdf(
       height: A6_HEIGHT,
       color: TEAL,
     })
-  }
 
-  page1.drawText('The Memory Trail', {
-    x: 20,
-    y: A6_HEIGHT - 30,
-    size: 10,
-    font: helvetica,
-    color: WHITE,
-  })
+    // "The Memory Trail" branding at bottom for text-only covers (avoid title clash)
+    const brandingText = 'The Memory Trail'
+    const brandingWidth = helvetica.widthOfTextAtSize(brandingText, 9)
+    page1.drawText(brandingText, {
+      x: (A6_WIDTH - brandingWidth) / 2,
+      y: 45,
+      size: 9,
+      font: helvetica,
+      color: WHITE,
+    })
+  }
 
   // Title with wrapping if too long
   const titleSize = setup.coverPhotoBlob ? 20 : 24
