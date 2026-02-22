@@ -40,11 +40,11 @@ export async function generateStaticMap(pois: POIRecord[]): Promise<Blob | null>
   const lonDiff = maxLon - minLon
   const maxDiff = Math.max(latDiff, lonDiff)
   
-  let zoom = 16 // default for very close POIs
-  if (maxDiff > 0.01) zoom = 14
-  if (maxDiff > 0.05) zoom = 12
-  if (maxDiff > 0.1) zoom = 11
-  if (maxDiff > 0.2) zoom = 10
+  let zoom = 17 // default for very close POIs (increased from 16)
+  if (maxDiff > 0.01) zoom = 15 // increased from 14
+  if (maxDiff > 0.05) zoom = 13 // increased from 12
+  if (maxDiff > 0.1) zoom = 12 // increased from 11
+  if (maxDiff > 0.2) zoom = 11 // increased from 10
 
   // Build overlay string with numbered markers
   // Using small circle markers with sequence numbers
