@@ -317,10 +317,10 @@ export async function generateBrochurePdf(
     let by = storyStartY
     for (const word of bodyWords) {
       const test = bodyLine ? `${bodyLine} ${word}` : word
-      if (helvetica.widthOfTextAtSize(test, 14) > A6_WIDTH - 40) {
+      if (helvetica.widthOfTextAtSize(test, 13) > A6_WIDTH - 40) {
         if (bodyLine && by > storyEndY) {
-          poiPage.drawText(bodyLine, { x: 20, y: by, size: 14, font: helvetica, color: NEAR_BLACK })
-          by -= 17
+          poiPage.drawText(bodyLine, { x: 20, y: by, size: 13, font: helvetica, color: NEAR_BLACK })
+          by -= 16
         }
         bodyLine = word
       } else {
@@ -328,8 +328,8 @@ export async function generateBrochurePdf(
       }
     }
     if (bodyLine && by > storyEndY) {
-      poiPage.drawText(bodyLine, { x: 20, y: by, size: 14, font: helvetica, color: NEAR_BLACK })
-      by -= 17
+      poiPage.drawText(bodyLine, { x: 20, y: by, size: 13, font: helvetica, color: NEAR_BLACK })
+      by -= 16
     }
 
     // Thin divider line above URL section
