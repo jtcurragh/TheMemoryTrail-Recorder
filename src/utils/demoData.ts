@@ -32,32 +32,32 @@ export async function createPlaceholderImage(
 
 /**
  * Sample Irish heritage stories
- * All POIs: 60 words each at 13pt font (safe maximum for varied word lengths)
+ * All POIs: 55 words each at 13pt font (safe maximum for all word lengths)
  */
 const sampleStories = [
-  // 60 words - Bronze Age Burnt Mound
-  'This Bronze Age burnt mound dates to approximately 2000 BC and represents one of the earliest traces of human activity in this area. Archaeological surveys have identified heat-shattered stones and charcoal-rich soil indicating intensive cooking activities. The site functioned as a communal gathering place where water was heated using hot stones. The mound accumulated over centuries, creating the distinctive horseshoe shape visible today.',
+  // 55 words - Bronze Age Burnt Mound
+  'This Bronze Age burnt mound dates to approximately 2000 BC and represents one of the earliest traces of human activity in this area. Archaeological surveys have identified heat-shattered stones and charcoal-rich soil indicating intensive cooking activities. The site functioned as a communal gathering place where water was heated using hot stones dropped into wooden troughs.',
   
-  // 60 words - Medieval Parish Church
-  'The medieval parish church ruins visible here date to the 13th century, though documentary evidence suggests an earlier wooden structure occupied this site. The west gable features remarkable stone carvings documented by the National Monuments Service. Local historians have traced continuous use of this site for worship spanning over 800 years. The church served the parish until a new church was built in the 1850s.',
+  // 55 words - Medieval Parish Church
+  'The medieval parish church ruins visible here date to the 13th century, though documentary evidence suggests an earlier wooden structure occupied this site. The west gable features remarkable stone carvings documented by the National Monuments Service. Local historians have traced continuous use of this site for worship spanning over 800 years.',
   
-  // 60 words - Holy Well
-  'This holy well has been a place of pilgrimage since early Christian times. The stone surround dates to the late 1700s when the site was formally renovated. Pattern days were traditionally held here on the feast of the patron saint, attracting pilgrims from across the region. The water was believed to have curative properties. The site remains a place of quiet reflection today.',
+  // 55 words - Holy Well
+  'This holy well has been a place of pilgrimage since early Christian times. The stone surround dates to the late 1700s when the site was formally renovated. Pattern days were traditionally held here on the feast of the patron saint, attracting pilgrims from across the region who would pray for healing.',
   
-  // 60 words - Victorian Estate Gates
-  'These magnificent wrought iron gates were commissioned by the local landlord family in the 1880s during Victorian prosperity. The exceptional craftsmanship displays typical attention to decorative detail, with elaborate scrollwork and the family crest prominently displayed. The gates were forged by a renowned Dublin ironworks firm. Similar gates once stood at other estate entrances, though few remain in such good condition.',
+  // 55 words - Victorian Estate Gates
+  'These magnificent wrought iron gates were commissioned by the local landlord family in the 1880s during Victorian prosperity. The exceptional craftsmanship displays typical attention to decorative detail, with elaborate scrollwork and the family crest prominently displayed. The gates were forged by a renowned Dublin ironworks firm whose work remains highly regarded.',
   
-  // 60 words - Stone Bridge
-  'The stone bridge crossing this stream dates to the early 1800s and formed part of the new road network established during that period. Built using local limestone, the single-arch design has proven remarkably durable. The bridge played a crucial role in connecting remote farming communities to the nearest market town. Local folklore preserves stories of dramatic events that occurred here.',
+  // 55 words - Stone Bridge
+  'The stone bridge crossing this stream dates to the early 1800s and formed part of the new road network established during that period. Built using local limestone, the single-arch design has proven remarkably durable. The bridge played a crucial role in connecting remote farming communities to the market town.',
   
-  // 60 words - Vernacular Cottage
-  'This vernacular thatched cottage represents a once-common building type that has become increasingly rare across rural Ireland. The thick stone walls and small windows reflect practical responses to the Irish climate. The house was continuously occupied by the same family for five generations until the 1970s. Recent conservation efforts have stabilized the structure, preserving this example of traditional architecture.',
+  // 55 words - Vernacular Cottage
+  'This vernacular thatched cottage represents a once-common building type that has become increasingly rare across rural Ireland. The thick stone walls and small windows reflect practical responses to the Irish climate. The house was continuously occupied by the same family for five generations until the 1970s when it was abandoned.',
   
-  // 60 words - Penal Mass Rock
-  'The mass rock concealed in this sheltered location served the local Catholic community during the Penal Laws era of the 1700s when public Catholic worship was forbidden. Mass was celebrated outdoors at hidden locations like this, with lookouts posted. The natural rock formation provided both an altar and protection from the elements. This site reminds us of a difficult period in history.',
+  // 55 words - Penal Mass Rock
+  'The mass rock concealed in this sheltered location served the local Catholic community during the Penal Laws era of the 1700s when public Catholic worship was forbidden. Mass was celebrated outdoors at hidden locations like this. The natural rock formation provided both an altar and protection from the elements.',
   
-  // 60 words - Lime Kiln
-  'This lime kiln is one of several built across the parish in the 1800s to produce quicklime for agricultural improvement. Limestone was burned at high temperatures for several days using turf or coal as fuel, then the resulting lime was spread on fields to reduce soil acidity. The decline of this practice has left these industrial monuments scattered across the landscape.',
+  // 55 words - Lime Kiln
+  'This lime kiln is one of several built across the parish in the 1800s to produce quicklime for agricultural improvement. Limestone was burned at high temperatures for several days, then the resulting lime was spread on fields to reduce soil acidity. The decline of this practice has left these monuments.',
 ]
 
 /**

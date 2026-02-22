@@ -270,18 +270,18 @@ export function POIDetailScreen() {
             htmlFor="story"
             className="block text-lg font-bold text-govuk-text mb-2"
           >
-            Story (max 60 words) <span className="text-govuk-red">*</span>
+            Story (max 55 words) <span className="text-govuk-red">*</span>
           </label>
           <textarea
             id="story"
             value={story}
             onChange={(e) => setStory(e.target.value)}
-            placeholder="Add your story here (max 60 words). Or write it in Word and add it when you export."
+            placeholder="Add your story here (max 55 words). Or write it in Word and add it when you export."
             rows={8}
             className="block w-full px-4 py-3 text-lg border-2 border-govuk-border rounded-none resize-y"
           />
           <p className="mt-1 text-sm text-govuk-muted">
-            {story.trim().split(/\s+/).filter(Boolean).length} / 60 words
+            {story.trim().split(/\s+/).filter(Boolean).length} / 55 words
           </p>
         </div>
 
