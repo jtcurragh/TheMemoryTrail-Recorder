@@ -409,7 +409,7 @@ export async function generateBrochurePdf(
     }
 
     // Thin divider line above URL section
-    const divider2Y = 45
+    const divider2Y = 58
     poiPage.drawRectangle({
       x: 20,
       y: divider2Y,
@@ -492,30 +492,14 @@ export async function generateBrochurePdf(
     console.log('[PDF] No map blob - skipping map embed')
   }
 
-  // Add coordinates list at bottom
-  let coordY = 60
-  for (const poi of validatedPois.slice(0, 3)) { // Show first 3 for space
-    if (poi.latitude != null && poi.longitude != null && coordY > 20) {
-      const ns = poi.latitude >= 0 ? 'N' : 'S'
-      const ew = poi.longitude >= 0 ? 'E' : 'W'
-      const line = `${poi.sequence}. ${Math.abs(poi.latitude).toFixed(4)}° ${ns}, ${Math.abs(poi.longitude).toFixed(4)}° ${ew}`
-      mapPage.drawText(line, {
-        x: 20,
-        y: coordY,
-        size: 8,
-        font: helvetica,
-        color: rgb(0.5, 0.5, 0.5),
-      })
-      coordY -= 12
-    }
-  }
-  if (validatedPois.length > 3) {
+  // Note about GPS data in ZIP export
+  if (setup.mapBlob) {
     mapPage.drawText(
       'Full GPS coordinates included in ZIP export',
       {
         x: 20,
-        y: coordY - 2,
-        size: 7,
+        y: 30,
+        size: 8,
         font: helvetica,
         color: rgb(0.5, 0.5, 0.5),
       }
