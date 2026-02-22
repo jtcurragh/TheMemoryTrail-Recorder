@@ -96,6 +96,7 @@ describe('BrochureSetupScreen', () => {
       creditsText: 'Local historians.',
       introText: 'Welcome to Ardmore.',
       funderLogos: [],
+      mapBlob: null,
       updatedAt: '2025-02-20T12:00:00Z',
     })
 

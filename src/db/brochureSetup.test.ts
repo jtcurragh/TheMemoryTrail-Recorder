@@ -25,6 +25,7 @@ describe('brochureSetup', () => {
       creditsText: 'Written by local historians.',
       introText: 'Welcome to our heritage trail.',
       funderLogos: [mockBlob],
+      mapBlob: null,
       updatedAt: '2025-02-20T12:00:00Z',
     }
 
@@ -51,6 +52,7 @@ describe('brochureSetup', () => {
       creditsText: '',
       introText: 'Intro text.',
       funderLogos: [] as Blob[],
+      mapBlob: null,
       updatedAt: '2025-02-20T12:00:00Z',
     }
 
@@ -72,6 +74,7 @@ describe('brochureSetup', () => {
       creditsText: '',
       introText: 'Intro',
       funderLogos: [] as Blob[],
+      mapBlob: null,
       updatedAt: '2025-02-20T12:00:00Z',
     }
     await saveBrochureSetup(setup1)

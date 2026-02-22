@@ -72,6 +72,7 @@ describe('pdfExport', () => {
       creditsText: 'Credits',
       introText: 'Introduction text.',
       funderLogos: [],
+      mapBlob: null,
       updatedAt: '2025-02-20T12:00:00Z',
     })
 
@@ -96,6 +97,7 @@ describe('pdfExport', () => {
       creditsText: '',
       introText: 'Intro',
       funderLogos: [],
+      mapBlob: null,
       updatedAt: '2025-02-20T12:00:00Z',
     }
     const trail = { id: 'test', groupCode: 't', trailType: 'graveyard' as const, displayName: 'T', createdAt: '', nextSequence: 1 }

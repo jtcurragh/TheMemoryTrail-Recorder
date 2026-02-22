@@ -147,6 +147,7 @@ export function BrochureSetupScreen() {
         creditsText: creditsText.trim(),
         introText: introText.trim(),
         funderLogos,
+        mapBlob: null,
         updatedAt: new Date().toISOString(),
       }
       await saveBrochureSetup(setup)
