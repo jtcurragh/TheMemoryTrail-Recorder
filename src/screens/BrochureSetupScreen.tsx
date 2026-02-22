@@ -5,7 +5,6 @@ import { getUserProfile } from '../db/userProfile'
 import { getTrailById } from '../db/trails'
 import { getPOIsByTrailId } from '../db/pois'
 import { generateStaticMap } from '../utils/mapbox'
-import { fixImageOrientation } from '../utils/exif'
 import type { BrochureSetup } from '../types'
 
 function CoverPhotoPreview({ blob }: { blob: Blob }) {
@@ -113,9 +112,32 @@ export function BrochureSetupScreen() {
   const handleCoverPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file?.type.startsWith('image/')) {
-      // Fix orientation before saving
-      const fixed = await fixImageOrientation(file)
-      setCoverPhotoBlob(fixed)
+      // Use createImageBitmap to auto-handle EXIF orientation (same as POI thumbnails)
+      try {
+        if (typeof createImageBitmap === 'function') {
+          const bitmap = await createImageBitmap(file)
+          const canvas = document.createElement('canvas')
+          canvas.width = bitmap.width
+          canvas.height = bitmap.height
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(bitmap, 0, 0)
+            bitmap.close()
+            const blob = await new Promise<Blob>((resolve) => {
+              canvas.toBlob((b) => resolve(b || file), 'image/jpeg', 0.92)
+            })
+            setCoverPhotoBlob(blob)
+          } else {
+            setCoverPhotoBlob(file)
+          }
+        } else {
+          // Fallback for browsers without createImageBitmap
+          setCoverPhotoBlob(file)
+        }
+      } catch (err) {
+        console.error('[CoverPhoto] Failed to process image:', err)
+        setCoverPhotoBlob(file)
+      }
     }
     e.target.value = ''
   }
