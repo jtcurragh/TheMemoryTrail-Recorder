@@ -63,7 +63,7 @@ export async function generateStaticMap(pois: POIRecord[]): Promise<Blob | null>
     .map((p) => `${p.longitude},${p.latitude}`)
     .join(',')
   
-  const pathOverlay = `path-2+f97316-0.6(${pathCoords})` // orange path with transparency
+  const pathOverlay = `path-5+f97316-1.0(${pathCoords})` // orange path, 5px width, fully opaque
 
   // Construct Mapbox Static Image URL
   // Format: /styles/v1/{username}/{style_id}/static/{overlay}/{lon},{lat},{zoom}/{width}x{height}{@2x}
