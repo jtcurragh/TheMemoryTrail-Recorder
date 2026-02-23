@@ -8,6 +8,15 @@ import type { UserProfile, Trail, POIRecord } from '../types'
 export interface WelcomeResult {
   isReturningUser: boolean
   profile: UserProfile
+  restoreMeta?: {
+    trailCount: number
+    poiCount: number
+    failedPhotos: string[]
+  }
+}
+
+export interface ProcessWelcomeOptions {
+  onProgress?: (current: number, total: number) => void
 }
 
 /**
@@ -16,7 +25,8 @@ export interface WelcomeResult {
  */
 export async function processWelcome(
   name: string,
-  email: string
+  email: string,
+  options?: ProcessWelcomeOptions
 ): Promise<WelcomeResult> {
   const emailNorm = email.trim().toLowerCase()
   const nameTrim = name.trim()
@@ -32,7 +42,9 @@ export async function processWelcome(
     .single()
 
   if (existingProfile) {
-    return restoreReturningUser(existingProfile, nameTrim, emailNorm)
+    return restoreReturningUser(existingProfile, nameTrim, emailNorm, {
+      onProgress: options?.onProgress,
+    })
   }
 
   return createNewUser(nameTrim, emailNorm)
@@ -91,6 +103,10 @@ async function createNewUser(name: string, email: string): Promise<WelcomeResult
   return { isReturningUser: false, profile }
 }
 
+interface RestoreOptions {
+  onProgress?: (current: number, total: number) => void
+}
+
 async function restoreReturningUser(
   supabaseProfile: {
     email: string
@@ -99,7 +115,8 @@ async function restoreReturningUser(
     group_code: string
   },
   name: string,
-  email: string
+  email: string,
+  options?: RestoreOptions
 ): Promise<WelcomeResult> {
   const profile = await createUserProfile({
     email,
@@ -112,6 +129,10 @@ async function restoreReturningUser(
     .from('trails')
     .select('*')
     .eq('group_code', profile.groupCode)
+
+  const trailCount = trails?.length ?? 0
+  const failedPhotos: string[] = []
+  let poiCount = 0
 
   if (trails && trails.length > 0) {
     for (const t of trails) {
@@ -132,16 +153,22 @@ async function restoreReturningUser(
       .eq('group_code', profile.groupCode)
 
     if (pois && pois.length > 0) {
-      for (const p of pois) {
+      poiCount = pois.length
+      const total = pois.length
+      for (let i = 0; i < pois.length; i++) {
+        const p = pois[i]
+        options?.onProgress?.(i + 1, total)
+
         let photoBlob: ArrayBuffer | null = null
         let thumbnailBlob: ArrayBuffer | null = null
+        let photoFailed = false
 
         if (p.photo_url) {
           try {
             const res = await fetch(p.photo_url)
             photoBlob = await res.arrayBuffer()
           } catch {
-            // ignore
+            photoFailed = true
           }
         }
         if (p.thumbnail_url) {
@@ -149,8 +176,12 @@ async function restoreReturningUser(
             const res = await fetch(p.thumbnail_url)
             thumbnailBlob = await res.arrayBuffer()
           } catch {
-            // ignore
+            photoFailed = true
           }
+        }
+
+        if (photoFailed) {
+          failedPhotos.push(p.site_name || p.filename || p.id)
         }
 
         const poi: POIRecord = {
@@ -194,5 +225,13 @@ async function restoreReturningUser(
     })
   }
 
-  return { isReturningUser: true, profile }
+  return {
+    isReturningUser: true,
+    profile,
+    restoreMeta: {
+      trailCount,
+      poiCount,
+      failedPhotos,
+    },
+  }
 }

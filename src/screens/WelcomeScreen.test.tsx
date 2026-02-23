@@ -100,7 +100,11 @@ describe('WelcomeScreen', () => {
     await user.click(screen.getByRole('button', { name: /start recording trails/i }))
 
     await waitFor(() => {
-      expect(welcomeService.processWelcome).toHaveBeenCalledWith('Sheila', 'sheila@example.com')
+      expect(welcomeService.processWelcome).toHaveBeenCalledWith(
+        'Sheila',
+        'sheila@example.com',
+        expect.objectContaining({ onProgress: expect.any(Function) })
+      )
       expect(onComplete).toHaveBeenCalled()
     })
   })
