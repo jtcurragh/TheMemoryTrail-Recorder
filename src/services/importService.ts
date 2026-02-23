@@ -91,6 +91,46 @@ function parseCsvRow(row: string): string[] {
   return values
 }
 
+function splitCsvLines(content: string): string[] {
+  const lines: string[] = []
+  let currentLine = ''
+  let inQuotes = false
+
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i]
+    const nextChar = content[i + 1]
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentLine += '""'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+      currentLine += char === '"' && !(inQuotes && nextChar === '"') ? '"' : ''
+    } else if (char === '\n' && !inQuotes) {
+      if (currentLine.trim()) {
+        lines.push(currentLine)
+      }
+      currentLine = ''
+    } else if (char === '\r' && nextChar === '\n' && !inQuotes) {
+      if (currentLine.trim()) {
+        lines.push(currentLine)
+      }
+      currentLine = ''
+      i++
+    } else {
+      currentLine += char
+    }
+  }
+
+  if (currentLine.trim()) {
+    lines.push(currentLine)
+  }
+
+  return lines
+}
+
 async function extractTrailManifest(zip: JSZip): Promise<TrailManifest> {
   const graveyardManifest = zip.file('trail_graveyard.json')
   const parishManifest = zip.file('trail_parish.json')
@@ -129,7 +169,7 @@ async function extractPOIsFromCSV(
   }
 
   const content = await csvFile.async('text')
-  const lines = content.split('\n').filter((line) => line.trim())
+  const lines = splitCsvLines(content)
 
   if (lines.length < 2) {
     throw new Error('CSV file is empty or contains only headers')
