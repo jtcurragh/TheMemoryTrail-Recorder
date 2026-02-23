@@ -130,14 +130,6 @@ export function SyncScreen() {
                 Don&apos;t worry — your work is safe on this device. Try again
                 when you have a good connection, or contact your area editor.
               </p>
-              <button
-                type="button"
-                onClick={() => void triggerManualSync()}
-                disabled={isSyncing}
-                className="mt-4 min-h-[48px] px-6 border-2 border-tmt-teal text-tmt-teal font-bold disabled:opacity-50"
-              >
-                Try Again
-              </button>
             </div>
           </div>
         </div>
@@ -153,6 +145,17 @@ export function SyncScreen() {
           </p>
         </div>
       )}
+
+      <div className="mt-8">
+        <button
+          type="button"
+          onClick={() => void triggerManualSync()}
+          disabled={isSyncing}
+          className="min-h-[48px] w-full px-6 border-2 border-tmt-teal bg-tmt-teal text-white font-bold disabled:opacity-50 disabled:bg-govuk-border"
+        >
+          {isSyncing ? 'Saving…' : 'Sync now'}
+        </button>
+      </div>
     </main>
   )
 }
