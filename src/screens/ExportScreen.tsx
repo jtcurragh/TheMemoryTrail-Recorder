@@ -13,14 +13,17 @@ import { ImportResultModal } from '../components/ImportResultModal'
 import { useImport } from '../hooks/useImport'
 import type { UserProfile, Trail } from '../types'
 
-function clearAllData(): void {
+async function clearAllData(): Promise<void> {
   localStorage.removeItem('welcomeComplete')
   localStorage.removeItem('userEmail')
   localStorage.removeItem('activeTrailId')
-  void db.userProfile.clear()
-  void db.trails.clear()
-  void db.pois.clear()
-  void db.brochureSetup.clear()
+  await Promise.all([
+    db.userProfile.clear(),
+    db.trails.clear(),
+    db.pois.clear(),
+    db.brochureSetup.clear(),
+    db.syncQueue.clear(),
+  ])
   window.location.reload()
 }
 
@@ -409,8 +412,10 @@ export function ExportScreen() {
               Clear all data?
             </h2>
             <p className="text-govuk-text mb-6">
-              This will remove all trails, photos, and your profile. You will
-              need to set up again. Make sure you have exported first.
+              This will remove all trails, photos, and your profile from this
+              device. You will need to set up again. Make sure you have exported
+              first. If you sign in again with the same email, your data will be
+              restored from the cloud.
             </p>
             <div className="flex gap-4">
               <button
@@ -424,7 +429,7 @@ export function ExportScreen() {
                 type="button"
                 onClick={() => {
                   setShowClearConfirm(false)
-                  clearAllData()
+                  void clearAllData()
                 }}
                 className="flex-1 min-h-[48px] bg-govuk-red text-white font-bold"
               >
