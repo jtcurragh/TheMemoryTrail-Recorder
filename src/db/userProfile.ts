@@ -1,5 +1,6 @@
 import type { UserProfile } from '../types'
 import { db } from './database'
+import { deriveGroupCodeFromEmail } from '../utils/groupCode'
 
 const USER_PROFILE_ID = 'default'
 
@@ -9,22 +10,26 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 }
 
 export async function createUserProfile(input: {
+  email: string
   name: string
-  groupName: string
-  groupCode: string
+  groupName?: string
+  groupCode?: string
 }): Promise<UserProfile> {
+  if (!input.email?.trim()) {
+    throw new Error('Email is required')
+  }
+  const groupCode = input.groupCode ?? deriveGroupCodeFromEmail(input.email)
+  const groupName = input.groupName ?? `${input.name}'s recordings`
+
   const profile: UserProfile = {
-    id: crypto.randomUUID(),
-    name: input.name,
-    groupName: input.groupName,
-    groupCode: input.groupCode,
+    id: USER_PROFILE_ID,
+    email: input.email.trim().toLowerCase(),
+    name: input.name.trim(),
+    groupName,
+    groupCode,
     createdAt: new Date().toISOString(),
   }
 
-  await db.userProfile.put({
-    ...profile,
-    id: USER_PROFILE_ID,
-  })
-
-  return { ...profile, id: USER_PROFILE_ID }
+  await db.userProfile.put(profile)
+  return profile
 }

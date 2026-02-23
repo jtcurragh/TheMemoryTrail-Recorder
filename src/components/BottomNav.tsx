@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
+import { features } from '../config/features'
 
-const navItems = [
-  { to: '/', icon: 'home', label: 'Trails' },
-  { to: '/capture', icon: 'camera', label: 'Capture' },
-  { to: '/trail', icon: 'grid', label: 'Trail' },
-  { to: '/export', icon: 'upload', label: 'Export' },
+const navItems: { to: string; label: string }[] = [
+  { to: '/capture', label: 'Record' },
+  { to: '/', label: 'Trails' },
+  { to: '/sync', label: 'Sync' },
+  ...(features.IMPORT_ZIP_ENABLED ? [{ to: '/export', label: 'Export' }] : []),
 ]
 
 export function BottomNav() {

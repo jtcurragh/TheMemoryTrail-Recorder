@@ -35,6 +35,7 @@ describe('pdfExport', () => {
 
   it('generates a PDF blob', async () => {
     await createUserProfile({
+      email: 'test@example.com',
       name: 'Test',
       groupName: 'Test Parish',
       groupCode: 'test',

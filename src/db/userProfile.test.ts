@@ -13,12 +13,14 @@ describe('userProfile', () => {
 
   it('creates and retrieves user profile', async () => {
     const profile = await createUserProfile({
+      email: 'sheila@example.com',
       name: 'Sheila',
       groupName: 'Clonfert Trails',
       groupCode: 'clonfert',
     })
 
     expect(profile.id).toBeDefined()
+    expect(profile.email).toBe('sheila@example.com')
     expect(profile.name).toBe('Sheila')
     expect(profile.groupName).toBe('Clonfert Trails')
     expect(profile.groupCode).toBe('clonfert')

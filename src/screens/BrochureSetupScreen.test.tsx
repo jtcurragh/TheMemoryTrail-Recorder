@@ -46,7 +46,7 @@ describe('BrochureSetupScreen', () => {
   })
 
   it('renders form when trail exists', async () => {
-    await createUserProfile({ name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
+    await createUserProfile({ email: 'sheila@example.com', name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
     await createTrail({
       groupCode: 'ardmore',
       trailType: 'graveyard',
@@ -66,7 +66,7 @@ describe('BrochureSetupScreen', () => {
   })
 
   it('pre-populates group name from user profile', async () => {
-    await createUserProfile({ name: 'Sheila', groupName: 'Ardmore Tidy Towns', groupCode: 'ardmore' })
+    await createUserProfile({ email: 'sheila@example.com', name: 'Sheila', groupName: 'Ardmore Tidy Towns', groupCode: 'ardmore' })
     await createTrail({
       groupCode: 'ardmore',
       trailType: 'graveyard',
@@ -81,7 +81,7 @@ describe('BrochureSetupScreen', () => {
   })
 
   it('pre-populates from existing brochure setup', async () => {
-    await createUserProfile({ name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
+    await createUserProfile({ email: 'sheila@example.com', name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
     await createTrail({
       groupCode: 'ardmore',
       trailType: 'graveyard',
@@ -111,7 +111,7 @@ describe('BrochureSetupScreen', () => {
   })
 
   it('shows validation errors when required fields are empty', async () => {
-    await createUserProfile({ name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
+    await createUserProfile({ email: 'sheila@example.com', name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
     await createTrail({
       groupCode: 'ardmore',
       trailType: 'graveyard',

@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserSetupScreen } from '../screens/UserSetupScreen'
+import { WelcomeScreen } from '../screens/WelcomeScreen'
 import { AppLayout } from './AppLayout'
 import { HideBottomNavProvider } from '../context/HideBottomNavContext'
-import { isUserSetupComplete } from '../utils/storage'
+import { isWelcomeComplete } from '../utils/storage'
 
 export function SetupGate() {
-  const [setupComplete, setSetupComplete] = useState(isUserSetupComplete)
+  const [complete, setComplete] = useState(isWelcomeComplete)
   const navigate = useNavigate()
 
-  if (!setupComplete) {
+  if (!complete) {
     return (
-      <UserSetupScreen
-        onCreateComplete={() => {
-          setSetupComplete(true)
+      <WelcomeScreen
+        onComplete={() => {
+          setComplete(true)
           navigate('/', { replace: true })
         }}
       />

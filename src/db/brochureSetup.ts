@@ -1,5 +1,8 @@
 import type { BrochureSetup } from '../types'
 import { db } from './database'
+import { enqueueSync } from './syncQueue'
+import { features } from '../config/features'
+import { supabase } from '../lib/supabase'
 
 /** Converts ArrayBuffer (stored) or Blob (legacy) to Blob for app use. */
 function toBlob(value: ArrayBuffer | Blob): Blob {
@@ -47,4 +50,7 @@ export async function saveBrochureSetup(setup: BrochureSetup): Promise<void> {
   await db.brochureSetup.put(
     recordForDb as unknown as BrochureSetup
   )
+  if (features.SUPABASE_SYNC_ENABLED && supabase) {
+    void enqueueSync('create', 'brochure_setup', id, {})
+  }
 }

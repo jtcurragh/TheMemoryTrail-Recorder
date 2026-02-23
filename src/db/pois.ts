@@ -6,7 +6,10 @@ import type {
   POICondition,
 } from '../types'
 import { db } from './database'
+import { enqueueSync } from './syncQueue'
 import { generatePOIId } from '../utils/idGeneration'
+import { features } from '../config/features'
+import { supabase } from '../lib/supabase'
 
 const DEFAULT_CATEGORY: POICategory = 'Other'
 const DEFAULT_CONDITION: POICondition = 'Good'
@@ -97,6 +100,9 @@ export async function createPOI(input: CreatePOIInput): Promise<POIRecord> {
     thumbnailBlob: thumbBuf,
   }
   await db.pois.add(recordForDb as unknown as POIRecord)
+  if (features.SUPABASE_SYNC_ENABLED && supabase) {
+    void enqueueSync('create', 'poi', id, {})
+  }
   return poi
 }
 
@@ -114,10 +120,16 @@ export async function updatePOI(
       : existing.completed
 
   await db.pois.update(id, { ...updates, completed })
+  if (features.SUPABASE_SYNC_ENABLED && supabase) {
+    void enqueueSync('update', 'poi', id, {})
+  }
 }
 
 export async function deletePOI(id: string): Promise<void> {
   await db.pois.delete(id)
+  if (features.SUPABASE_SYNC_ENABLED && supabase) {
+    void enqueueSync('delete', 'poi', id, {})
+  }
 }
 
 export async function reorderPOI(
@@ -137,6 +149,9 @@ export async function reorderPOI(
   await db.transaction('rw', db.pois, async () => {
     for (let i = 0; i < reordered.length; i++) {
       await db.pois.update(reordered[i].id, { sequence: i + 1 })
+      if (features.SUPABASE_SYNC_ENABLED && supabase) {
+        void enqueueSync('update', 'poi', reordered[i].id, {})
+      }
     }
   })
 }

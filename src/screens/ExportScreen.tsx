@@ -14,7 +14,8 @@ import { useImport } from '../hooks/useImport'
 import type { UserProfile, Trail } from '../types'
 
 function clearAllData(): void {
-  localStorage.removeItem('userSetupComplete')
+  localStorage.removeItem('welcomeComplete')
+  localStorage.removeItem('userEmail')
   localStorage.removeItem('activeTrailId')
   void db.userProfile.clear()
   void db.trails.clear()

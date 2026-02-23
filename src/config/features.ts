@@ -9,6 +9,10 @@ export const features = {
   IMPORT_ZIP_ENABLED: true,
   IMPORT_EXIF_ENABLED: false, // placeholder — not yet implemented
 
+  // Supabase (Free tier: auth + sync)
+  SUPABASE_SYNC_ENABLED: true,
+  SUPABASE_AUTH_ENABLED: true,
+
   // EditorAdmin tier (future)
   TRAIL_VALIDATION_ENABLED: false,
   MULTI_TRAIL_MERGE_ENABLED: false,

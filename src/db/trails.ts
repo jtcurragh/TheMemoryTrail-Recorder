@@ -1,5 +1,8 @@
 import type { Trail, TrailType } from '../types'
 import { db } from './database'
+import { enqueueSync } from './syncQueue'
+import { features } from '../config/features'
+import { supabase } from '../lib/supabase'
 
 function trailId(groupCode: string, trailType: TrailType): string {
   return `${groupCode}-${trailType}`
@@ -30,6 +33,9 @@ export async function createTrail(input: {
     nextSequence: 1,
   }
   await db.trails.add(trail)
+  if (features.SUPABASE_SYNC_ENABLED && supabase) {
+    void enqueueSync('create', 'trail', id, {})
+  }
   return trail
 }
 
@@ -40,6 +46,9 @@ export async function incrementTrailSequence(
   if (!trail) throw new Error(`Trail not found: ${trailId}`)
   const next = trail.nextSequence + 1
   await db.trails.update(trailId, { nextSequence: next })
+  if (features.SUPABASE_SYNC_ENABLED && supabase) {
+    void enqueueSync('update', 'trail', trailId, {})
+  }
   return next
 }
 

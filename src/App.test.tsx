@@ -1,10 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import App from './App'
 
 describe('App', () => {
-  it('renders The Memory Trail heading', () => {
+  beforeEach(() => {
+    localStorage.setItem('welcomeComplete', 'true')
+    localStorage.setItem('userEmail', 'test@example.com')
+  })
+
+  it('renders The Memory Trail heading when welcome complete', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: /memory trail/i })).toBeInTheDocument()
+    expect(screen.getByText(/the memory trail/i)).toBeInTheDocument()
   })
 })
