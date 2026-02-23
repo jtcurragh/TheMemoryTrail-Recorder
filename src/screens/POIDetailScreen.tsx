@@ -338,6 +338,32 @@ export function POIDetailScreen() {
       <p className="mt-4 text-govuk-muted text-sm">
         <span className="text-govuk-red">*</span> Required fields for brochure. You can also write your story in Word and add it when you export.
       </p>
+
+      {trailPois.length > 1 && (
+        <div className="mt-6 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleNavigate('prev')}
+            disabled={!hasPrevious || saving}
+            className="flex-1 min-h-[48px] px-4 border-2 border-govuk-border bg-white text-govuk-text font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-govuk-background focus:outline-none focus:ring-2 focus:ring-tmt-focus"
+            aria-label="Previous POI"
+          >
+            ← Previous
+          </button>
+          <span className="text-govuk-muted text-sm whitespace-nowrap">
+            {currentIndex + 1} of {trailPois.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleNavigate('next')}
+            disabled={!hasNext || saving}
+            className="flex-1 min-h-[48px] px-4 border-2 border-govuk-border bg-white text-govuk-text font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-govuk-background focus:outline-none focus:ring-2 focus:ring-tmt-focus"
+            aria-label="Next POI"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </main>
   )
 }
