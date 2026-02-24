@@ -20,12 +20,14 @@ function PhotoImage({
   }, [blob])
   if (!src) return <div className="w-full max-h-48 bg-govuk-background animate-pulse" />
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="w-full max-h-48 object-contain bg-govuk-background"
-      style={{ transform: `rotate(${rotation}deg)` }}
-    />
+    <div className="w-full max-h-48 overflow-hidden bg-govuk-background">
+      <img
+        src={src}
+        alt={alt}
+        className="w-full max-h-48 object-contain"
+        style={{ transform: `rotate(${rotation}deg)` }}
+      />
+    </div>
   )
 }
 
