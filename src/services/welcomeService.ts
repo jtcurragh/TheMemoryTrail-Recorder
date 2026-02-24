@@ -2,8 +2,20 @@ import { supabase } from '../lib/supabase'
 import { db } from '../db/database'
 import { createUserProfile } from '../db/userProfile'
 import { createTrail } from '../db/trails'
-import { deriveGroupCodeFromEmail } from '../utils/groupCode'
+import { deriveGroupCode, deriveGroupCodeFromEmail } from '../utils/groupCode'
 import type { UserProfile, Trail, POIRecord } from '../types'
+
+/** Check if email exists in Supabase (returning user). */
+export async function checkEmailExists(email: string): Promise<boolean> {
+  if (!supabase) return false
+  const emailNorm = email.trim().toLowerCase()
+  const { data } = await supabase
+    .from('user_profile')
+    .select('email')
+    .eq('email', emailNorm)
+    .single()
+  return data != null
+}
 
 export interface WelcomeResult {
   isReturningUser: boolean
@@ -17,6 +29,7 @@ export interface WelcomeResult {
 
 export interface ProcessWelcomeOptions {
   onProgress?: (current: number, total: number) => void
+  parishName?: string
 }
 
 /**
@@ -32,7 +45,7 @@ export async function processWelcome(
   const nameTrim = name.trim()
 
   if (!supabase) {
-    return createNewUserLocalOnly(nameTrim, emailNorm)
+    return createNewUserLocalOnly(nameTrim, emailNorm, options?.parishName)
   }
 
   const { data: existingProfile } = await supabase
@@ -47,37 +60,54 @@ export async function processWelcome(
     })
   }
 
-  return createNewUser(nameTrim, emailNorm)
+  return createNewUser(nameTrim, emailNorm, options?.parishName)
 }
 
 async function createNewUserLocalOnly(
   name: string,
-  email: string
+  email: string,
+  parishName?: string
 ): Promise<WelcomeResult> {
-  const groupCode = deriveGroupCodeFromEmail(email)
+  const groupName = parishName?.trim() || `${name}'s recordings`
+  const groupCode = parishName?.trim()
+    ? deriveGroupCode(parishName)
+    : deriveGroupCodeFromEmail(email)
   const profile = await createUserProfile({
     email,
     name,
-    groupName: `${name}'s recordings`,
+    groupName,
     groupCode,
   })
 
   await createTrail({
     groupCode,
     trailType: 'graveyard',
-    displayName: `${name} Graveyard Trail`,
+    displayName: `${groupName} Graveyard Trail`,
   })
   await createTrail({
     groupCode,
     trailType: 'parish',
-    displayName: `${name} Parish Trail`,
+    displayName: `${groupName} Parish Trail`,
   })
 
   return { isReturningUser: false, profile }
 }
 
-async function createNewUser(name: string, email: string): Promise<WelcomeResult> {
-  const profile = await createUserProfile({ email, name: name })
+async function createNewUser(
+  name: string,
+  email: string,
+  parishName?: string
+): Promise<WelcomeResult> {
+  const groupName = parishName?.trim() || `${name}'s recordings`
+  const groupCode = parishName?.trim()
+    ? deriveGroupCode(parishName)
+    : deriveGroupCodeFromEmail(email)
+  const profile = await createUserProfile({
+    email,
+    name,
+    groupName,
+    groupCode,
+  })
 
   await supabase!.from('user_profile').upsert(
     {
@@ -92,12 +122,12 @@ async function createNewUser(name: string, email: string): Promise<WelcomeResult
   await createTrail({
     groupCode: profile.groupCode,
     trailType: 'graveyard',
-    displayName: `${name} Graveyard Trail`,
+    displayName: `${groupName} Graveyard Trail`,
   })
   await createTrail({
     groupCode: profile.groupCode,
     trailType: 'parish',
-    displayName: `${name} Parish Trail`,
+    displayName: `${groupName} Parish Trail`,
   })
 
   return { isReturningUser: false, profile }
@@ -213,15 +243,16 @@ async function restoreReturningUser(
       }
     }
   } else {
+    const groupName = profile.groupName || profile.name
     await createTrail({
       groupCode: profile.groupCode,
       trailType: 'graveyard',
-      displayName: `${profile.name} Graveyard Trail`,
+      displayName: `${groupName} Graveyard Trail`,
     })
     await createTrail({
       groupCode: profile.groupCode,
       trailType: 'parish',
-      displayName: `${profile.name} Parish Trail`,
+      displayName: `${groupName} Parish Trail`,
     })
   }
 
