@@ -13,9 +13,8 @@ const TEAL = rgb(58 / 255, 175 / 255, 169 / 255)
 const NEAR_BLACK = rgb(11 / 255, 12 / 255, 12 / 255)
 const WHITE = rgb(1, 1, 1)
 
-/** WCAG AA: 4.5:1 for normal text, 3:1 for large text (18pt+ or 14pt+ bold). */
+/** WCAG AA: 4.5:1 for normal text. */
 const WCAG_AA_NORMAL = 4.5
-const WCAG_AA_LARGE = 3
 
 function relativeLuminance(r: number, g: number, b: number): number {
   const [rs, gs, bs] = [r, g, b].map((c) =>
