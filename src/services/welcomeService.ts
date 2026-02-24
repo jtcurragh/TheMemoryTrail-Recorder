@@ -237,7 +237,7 @@ async function restoreReturningUser(
           condition: (p.condition as POIRecord['condition']) ?? 'Good',
           notes: p.notes ?? '',
           completed: p.completed ?? false,
-          rotation: 0,
+          rotation: ((p.rotation ?? 0) as 0 | 90 | 180 | 270),
           createdBy: p.created_by,
           lastModifiedBy: p.last_modified_by,
           lastModifiedAt: p.last_modified_at,
