@@ -184,15 +184,17 @@ async function restoreReturningUser(
           failedPhotos.push(p.site_name || p.filename || p.id)
         }
 
-        const poi: POIRecord = {
+        const photoBuf = photoBlob ?? new ArrayBuffer(0)
+        const thumbBuf = thumbnailBlob ?? new ArrayBuffer(0)
+        const recordForDb = {
           id: p.id,
           trailId: p.trail_id,
           groupCode: p.group_code,
           trailType: p.trail_type as POIRecord['trailType'],
           sequence: p.sequence ?? 0,
           filename: p.filename ?? '',
-          photoBlob: photoBlob ? new Blob([photoBlob]) : new Blob(),
-          thumbnailBlob: thumbnailBlob ? new Blob([thumbnailBlob]) : new Blob(),
+          photoBlob: photoBuf,
+          thumbnailBlob: thumbBuf,
           latitude: p.latitude,
           longitude: p.longitude,
           accuracy: p.accuracy,
@@ -209,7 +211,7 @@ async function restoreReturningUser(
           lastModifiedBy: p.last_modified_by,
           lastModifiedAt: p.last_modified_at,
         }
-        await db.pois.put(poi)
+        await db.pois.put(recordForDb as unknown as POIRecord)
       }
     }
   } else {
