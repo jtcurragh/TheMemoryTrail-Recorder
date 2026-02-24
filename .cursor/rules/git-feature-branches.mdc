@@ -15,8 +15,9 @@ Before making feature changes or fixes:
 
 2. **Work on the branch** – make all edits and commits on the feature branch.
 
-3. **Push the branch** when ready:
+3. **Commit and push by default** – after completing feature work, commit and push without being asked:
    ```bash
+   git add -A && git commit -m "Short descriptive message"
    git push -u origin feature/short-descriptive-name
    ```
 

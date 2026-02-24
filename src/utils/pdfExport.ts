@@ -2,6 +2,7 @@ import {
   PDFDocument,
   StandardFonts,
   rgb,
+  degrees,
   type PDFFont,
   type PDFImage,
   type PDFPage,
@@ -446,11 +447,13 @@ export async function generateBrochurePdf(
     const photoX = (A6_WIDTH - photoW) / 2
     const photoY = A6_HEIGHT - photoH
     
+    const rotation = (poi.rotation as number | undefined) ?? 0
     poiPage.drawImage(photoImg, {
       x: photoX,
       y: photoY,
       width: photoW,
       height: photoH,
+      rotate: degrees(rotation),
     })
 
     // Title section below photo
