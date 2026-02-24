@@ -8,9 +8,51 @@ import type { Trail, POIRecord, BrochureSetup } from '../types'
 
 const A6_WIDTH = 297.64
 const A6_HEIGHT = 419.53
-const TEAL = rgb(58 / 255, 155 / 255, 142 / 255)
+// Brand teal #3AAFA9 for brochure cover (WCAG contrast with white: use bold for normal-sized text)
+const TEAL = rgb(58 / 255, 175 / 255, 169 / 255)
 const NEAR_BLACK = rgb(11 / 255, 12 / 255, 12 / 255)
 const WHITE = rgb(1, 1, 1)
+
+/** WCAG AA: 4.5:1 for normal text, 3:1 for large text (18pt+ or 14pt+ bold). */
+const WCAG_AA_NORMAL = 4.5
+const WCAG_AA_LARGE = 3
+
+function relativeLuminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map((c) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  )
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
+}
+
+function contrastRatio(l1: number, l2: number): number {
+  const [light, dark] = l1 >= l2 ? [l1, l2] : [l2, l1]
+  return (light + 0.05) / (dark + 0.05)
+}
+
+/** Draw text with subtle letter-spacing for legibility (pdf-lib has no built-in support). */
+function drawTextWithLetterSpacing(
+  page: { drawText: (text: string, opts: { x: number; y: number; size: number; font: unknown; color: unknown }) => void },
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  font: { widthOfTextAtSize: (t: string, s: number) => number },
+  color: unknown,
+  letterSpacing = 0.8,
+  align: 'left' | 'center' = 'center'
+): void {
+  const totalWidth = [...text].reduce(
+    (sum, c) => sum + font.widthOfTextAtSize(c, size) + letterSpacing,
+    0
+  ) - letterSpacing
+  const startX = align === 'center' ? x - totalWidth / 2 : x
+  let cx = startX
+  for (const char of text) {
+    page.drawText(char, { x: cx, y, size, font, color })
+    cx += font.widthOfTextAtSize(char, size) + letterSpacing
+  }
+}
+
 const PLACEHOLDER_URL = 'https://thememorytrail.ie'
 
 async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
@@ -46,17 +88,37 @@ export async function generateBrochurePdf(
 
   const page1 = doc.addPage([A6_WIDTH, A6_HEIGHT])
 
-  // If cover photo exists, use it; otherwise create text-only cover
+  // Layout constants: header band (solid teal), image zone, footer band (solid teal)
+  const FOOTER_HEIGHT = 30
+  const SUPER_TITLE_SIZE = 14
+  const TITLE_SIZE = setup.coverPhotoBlob ? 20 : 24
+  const SUBTITLE_SIZE = 11
+  const HEADER_PADDING = 20
+  // Header height: supertitle + title (1–2 lines) + subtitle + padding
+  const HEADER_HEIGHT = setup.coverPhotoBlob ? 110 : 0
+
+  // Contrast audit: white on teal #3AAFA9 (rgb 58,175,169)
+  const tealLum = relativeLuminance(58 / 255, 175 / 255, 169 / 255)
+  const whiteLum = relativeLuminance(1, 1, 1)
+  const whiteOnTealRatio = contrastRatio(whiteLum, tealLum)
+  // Subtitle at 11pt: use bold to meet WCAG AA large-text (3:1) if ratio < 4.5:1
+  const subtitleFont = whiteOnTealRatio >= WCAG_AA_NORMAL ? helvetica : helveticaBold
+
   if (setup.coverPhotoBlob) {
+    // Photo cover: solid header band, image zone below, solid footer band
+    const imageZoneTop = A6_HEIGHT - HEADER_HEIGHT
+    const imageZoneBottom = FOOTER_HEIGHT
+    const imageZoneHeight = imageZoneTop - imageZoneBottom
+
     const coverImage = await embedImage(doc, setup.coverPhotoBlob)
     const imgScale = Math.max(
       A6_WIDTH / coverImage.width,
-      A6_HEIGHT / coverImage.height
+      imageZoneHeight / coverImage.height
     )
     const imgW = coverImage.width * imgScale
     const imgH = coverImage.height * imgScale
     const imgX = (A6_WIDTH - imgW) / 2
-    const imgY = A6_HEIGHT - imgH
+    const imgY = imageZoneBottom + (imageZoneHeight - imgH) / 2
 
     page1.drawImage(coverImage, {
       x: imgX,
@@ -65,26 +127,30 @@ export async function generateBrochurePdf(
       height: imgH,
     })
 
-    const overlayHeight = A6_HEIGHT / 3
+    // Solid teal header band (fully opaque, no photo bleed-through)
     page1.drawRectangle({
       x: 0,
-      y: A6_HEIGHT - overlayHeight,
+      y: imageZoneTop,
       width: A6_WIDTH,
-      height: overlayHeight,
+      height: HEADER_HEIGHT,
       color: TEAL,
-      opacity: 0.7,
     })
 
-    // Historic Graves Trail branding at top for photo covers (moved higher to avoid title clash)
-    page1.drawText('Historic Graves Trail', {
-      x: 20,
-      y: A6_HEIGHT - 20,
-      size: 9,
-      font: helvetica,
-      color: WHITE,
-    })
+    // Supertitle "Historic Graves Trail": 14pt, white, letter-spacing
+    const supertitleY = A6_HEIGHT - HEADER_PADDING - SUPER_TITLE_SIZE
+    drawTextWithLetterSpacing(
+      page1,
+      'Historic Graves Trail',
+      20,
+      supertitleY,
+      SUPER_TITLE_SIZE,
+      helvetica,
+      WHITE,
+      0.8,
+      'left'
+    )
   } else {
-    // Text-only cover with solid teal background
+    // Text-only cover: full solid teal background
     page1.drawRectangle({
       x: 0,
       y: 0,
@@ -93,94 +159,126 @@ export async function generateBrochurePdf(
       color: TEAL,
     })
 
-    // Historic Graves Trail branding at bottom for text-only covers (avoid title clash)
-    const brandingText = 'Historic Graves Trail'
-    const brandingWidth = helvetica.widthOfTextAtSize(brandingText, 9)
-    page1.drawText(brandingText, {
-      x: (A6_WIDTH - brandingWidth) / 2,
-      y: 45,
-      size: 9,
-      font: helvetica,
-      color: WHITE,
-    })
+    // Historic Graves Trail branding for text-only covers
+    drawTextWithLetterSpacing(
+      page1,
+      'Historic Graves Trail',
+      A6_WIDTH / 2,
+      45,
+      SUPER_TITLE_SIZE,
+      helvetica,
+      WHITE,
+      0.8,
+      'center'
+    )
   }
 
-  // Title with wrapping if too long
-  const titleSize = setup.coverPhotoBlob ? 20 : 24
+  // Main title: bold, large, entirely within solid teal band (photo) or centered (text-only)
   const titleText = setup.coverTitle.toUpperCase()
-  const maxWidth = A6_WIDTH - 40 // 20px margin on each side
-  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, titleSize)
-  
-  let titleBottomY: number // Track where title ends for subtitle placement
-  
-  if (titleWidth <= maxWidth) {
-    // Single line - fits nicely
-    const titleY = setup.coverPhotoBlob ? A6_HEIGHT - (A6_HEIGHT / 3) / 2 - titleSize / 2 : A6_HEIGHT / 2
-    page1.drawText(titleText, {
-      x: (A6_WIDTH - titleWidth) / 2,
-      y: titleY,
-      size: titleSize,
-      font: helveticaBold,
-      color: WHITE,
-    })
-    titleBottomY = titleY
-  } else {
-    // Multi-line - wrap text
-    const words = titleText.split(' ')
-    const lines: string[] = []
-    let currentLine = ''
-    
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word
-      const testWidth = helveticaBold.widthOfTextAtSize(testLine, titleSize)
-      
-      if (testWidth <= maxWidth) {
-        currentLine = testLine
-      } else {
-        if (currentLine) lines.push(currentLine)
-        currentLine = word
-      }
-    }
-    if (currentLine) lines.push(currentLine)
-    
-    const lineHeight = titleSize * 1.2
-    const totalHeight = lines.length * lineHeight
-    const startY = setup.coverPhotoBlob 
-      ? A6_HEIGHT - (A6_HEIGHT / 3) / 2 + totalHeight / 2
-      : A6_HEIGHT / 2 + totalHeight / 2
-    
-    lines.forEach((line, i) => {
-      const lineWidth = helveticaBold.widthOfTextAtSize(line, titleSize)
-      page1.drawText(line, {
-        x: (A6_WIDTH - lineWidth) / 2,
-        y: startY - (i * lineHeight),
-        size: titleSize,
+  const maxWidth = A6_WIDTH - 40
+  const titleWidth = helveticaBold.widthOfTextAtSize(titleText, TITLE_SIZE)
+  let titleBottomY: number
+
+  if (setup.coverPhotoBlob) {
+    const titleAreaCenterY = A6_HEIGHT - HEADER_HEIGHT / 2
+    if (titleWidth <= maxWidth) {
+      page1.drawText(titleText, {
+        x: (A6_WIDTH - titleWidth) / 2,
+        y: titleAreaCenterY - TITLE_SIZE / 2,
+        size: TITLE_SIZE,
         font: helveticaBold,
         color: WHITE,
       })
-    })
-    titleBottomY = startY - ((lines.length - 1) * lineHeight)
+      titleBottomY = titleAreaCenterY - TITLE_SIZE / 2
+    } else {
+      const words = titleText.split(' ')
+      const lines: string[] = []
+      let currentLine = ''
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        if (helveticaBold.widthOfTextAtSize(testLine, TITLE_SIZE) <= maxWidth) {
+          currentLine = testLine
+        } else {
+          if (currentLine) lines.push(currentLine)
+          currentLine = word
+        }
+      }
+      if (currentLine) lines.push(currentLine)
+      const lineHeight = TITLE_SIZE * 1.2
+      const totalHeight = lines.length * lineHeight
+      const startY = titleAreaCenterY + totalHeight / 2 - lineHeight
+      lines.forEach((line, i) => {
+        const lw = helveticaBold.widthOfTextAtSize(line, TITLE_SIZE)
+        page1.drawText(line, {
+          x: (A6_WIDTH - lw) / 2,
+          y: startY - i * lineHeight,
+          size: TITLE_SIZE,
+          font: helveticaBold,
+          color: WHITE,
+        })
+      })
+      titleBottomY = startY - (lines.length - 1) * lineHeight
+    }
+  } else {
+    const titleY = A6_HEIGHT / 2
+    if (titleWidth <= maxWidth) {
+      page1.drawText(titleText, {
+        x: (A6_WIDTH - titleWidth) / 2,
+        y: titleY - TITLE_SIZE / 2,
+        size: TITLE_SIZE,
+        font: helveticaBold,
+        color: WHITE,
+      })
+      titleBottomY = titleY - TITLE_SIZE / 2
+    } else {
+      const words = titleText.split(' ')
+      const lines: string[] = []
+      let currentLine = ''
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        if (helveticaBold.widthOfTextAtSize(testLine, TITLE_SIZE) <= maxWidth) {
+          currentLine = testLine
+        } else {
+          if (currentLine) lines.push(currentLine)
+          currentLine = word
+        }
+      }
+      if (currentLine) lines.push(currentLine)
+      const lineHeight = TITLE_SIZE * 1.2
+      const totalHeight = lines.length * lineHeight
+      const startY = titleY + totalHeight / 2 - lineHeight
+      lines.forEach((line, i) => {
+        const lw = helveticaBold.widthOfTextAtSize(line, TITLE_SIZE)
+        page1.drawText(line, {
+          x: (A6_WIDTH - lw) / 2,
+          y: startY - i * lineHeight,
+          size: TITLE_SIZE,
+          font: helveticaBold,
+          color: WHITE,
+        })
+      })
+      titleBottomY = startY - (lines.length - 1) * lineHeight
+    }
   }
 
-  // Subtitle below main title
+  // Subtitle: WCAG AA contrast — use bold if ratio < 4.5:1
   const subtitleText = 'National Historic Graveyard Trail 2026'
-  const subtitleSize = 11
-  const subtitleWidth = helvetica.widthOfTextAtSize(subtitleText, subtitleSize)
+  const subtitleWidth = subtitleFont.widthOfTextAtSize(subtitleText, SUBTITLE_SIZE)
   page1.drawText(subtitleText, {
     x: (A6_WIDTH - subtitleWidth) / 2,
     y: titleBottomY - 20,
-    size: subtitleSize,
-    font: helvetica,
+    size: SUBTITLE_SIZE,
+    font: subtitleFont,
     color: WHITE,
   })
 
-  const barHeight = 30
+  // Solid teal footer band (fully opaque), bold white text
   page1.drawRectangle({
     x: 0,
     y: 0,
     width: A6_WIDTH,
-    height: barHeight,
-    color: setup.coverPhotoBlob ? TEAL : rgb(0.2, 0.6, 0.55),
+    height: FOOTER_HEIGHT,
+    color: TEAL,
   })
   const groupWidth = helveticaBold.widthOfTextAtSize(
     setup.groupName.toUpperCase(),
