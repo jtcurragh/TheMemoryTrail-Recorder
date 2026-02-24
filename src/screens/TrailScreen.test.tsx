@@ -196,8 +196,10 @@ describe('TrailScreen thumbnail rotation', () => {
       expect(screen.getByText(/Ardmore Graveyard Trail/i)).toBeInTheDocument()
     })
 
-    const thumbnails = document.querySelectorAll('img[alt*="ardmore-g-001"]')
-    expect(thumbnails.length).toBeGreaterThanOrEqual(1)
-    expect(thumbnails[0]).toHaveStyle({ transform: 'rotate(90deg)' })
+    await waitFor(() => {
+      const thumbnails = document.querySelectorAll('img[alt*="ardmore-g-001"]')
+      expect(thumbnails.length).toBeGreaterThanOrEqual(1)
+      expect(thumbnails[0]).toHaveStyle({ transform: 'rotate(90deg)' })
+    })
   })
 })

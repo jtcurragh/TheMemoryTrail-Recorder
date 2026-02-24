@@ -11,6 +11,7 @@ import { generateDemoBrochureSetup, generateDemoPOIs, generateDemoTrail } from '
 import { ImportButton } from '../components/ImportButton'
 import { ImportResultModal } from '../components/ImportResultModal'
 import { useImport } from '../hooks/useImport'
+import { deriveGroupCode, slugifyForFilename } from '../utils/groupCode'
 import type { UserProfile, Trail } from '../types'
 
 async function clearAllData(): Promise<void> {
@@ -109,7 +110,10 @@ export function ExportScreen() {
       ])
       if (!setup) throw new Error('Brochure setup not found')
       const pdf = await generateBrochurePdf(trail, setup, pois)
-      const filename = `${trail.groupCode}-${trail.trailType}-digital-brochure.pdf`
+      const filename =
+        trail.trailType === 'graveyard'
+          ? `${slugifyForFilename(setup.groupName)}-graveyard-trail.pdf`
+          : `${slugifyForFilename(setup.coverTitle)}.pdf`
       downloadBlob(pdf, filename)
       setPdfSuccess(true)
       setTimeout(() => setPdfSuccess(false), 3000)
@@ -152,7 +156,8 @@ export function ExportScreen() {
 
       const trails = await getTrailsByGroupCode(profile.groupCode)
       const zip = await exportTrailsToZip(trails)
-      const filename = `${profile.groupCode}_memory_trail_export.zip`
+      const parishSlug = deriveGroupCode(profile.groupName) || profile.groupCode
+      const filename = `${parishSlug}_historic_graves_trail_export.zip`
       downloadBlob(zip, filename)
       setExportSuccess(true)
       setTimeout(() => setExportSuccess(false), 3000)

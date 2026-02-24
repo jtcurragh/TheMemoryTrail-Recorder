@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveGroupCode } from './groupCode'
+import { deriveGroupCode, slugifyForFilename } from './groupCode'
 
 describe('deriveGroupCode', () => {
   it('lowercases the group name', () => {
@@ -24,5 +24,21 @@ describe('deriveGroupCode', () => {
 
   it('handles empty string', () => {
     expect(deriveGroupCode('')).toBe('')
+  })
+})
+
+describe('slugifyForFilename', () => {
+  it('slugifies cover title for parish brochure', () => {
+    expect(slugifyForFilename('Clonfert Parish Heritage Trail')).toBe(
+      'clonfert-parish-heritage-trail'
+    )
+  })
+
+  it('handles empty string', () => {
+    expect(slugifyForFilename('')).toBe('export')
+  })
+
+  it('handles whitespace only', () => {
+    expect(slugifyForFilename('   ')).toBe('export')
   })
 })
