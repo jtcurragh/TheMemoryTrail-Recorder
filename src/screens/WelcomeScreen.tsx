@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { processWelcome } from '../services/welcomeService'
+import { processWelcome, checkEmailExists } from '../services/welcomeService'
 import { setWelcomeComplete, setStoredUserEmail } from '../utils/storage'
 
 interface WelcomeScreenProps {
   onComplete: () => void
 }
 
+type Step = 'name-email' | 'parish' | 'done'
+
 export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [parishName, setParishName] = useState('')
+  const [step, setStep] = useState<Step>('name-email')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [restoreProgress, setRestoreProgress] = useState<{
@@ -19,43 +23,49 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
     null
   )
 
-  const canSubmit =
+  const canContinue =
     name.trim().length > 0 &&
     email.trim().length > 0 &&
     !isSubmitting &&
-    !postCompleteMessage
+    step === 'name-email'
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const canCreateTrails =
+    parishName.trim().length > 0 && !isSubmitting && step === 'parish'
+
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmit && !postCompleteMessage) return
+    if (!canContinue) return
 
     setIsSubmitting(true)
     setError(null)
-    setRestoreProgress(null)
-    setPostCompleteMessage(null)
     try {
-      const result = await processWelcome(name.trim(), email.trim(), {
-        onProgress: (current, total) =>
-          setRestoreProgress({ current, total }),
-      })
-      setStoredUserEmail(email.trim().toLowerCase())
-      setWelcomeComplete()
+      const exists = await checkEmailExists(email.trim())
+      if (exists) {
+        const result = await processWelcome(name.trim(), email.trim(), {
+          onProgress: (current, total) =>
+            setRestoreProgress({ current, total }),
+        })
+        setStoredUserEmail(email.trim().toLowerCase())
+        setWelcomeComplete()
 
-      const meta = result.restoreMeta
-      if (meta) {
-        if (meta.trailCount === 0 && meta.poiCount === 0) {
-          setPostCompleteMessage(
-            'No data found for this email address. If you used a different email on your other device, please sign in with that address instead.'
-          )
-        } else if (meta.failedPhotos.length > 0) {
-          setPostCompleteMessage(
-            `Restored successfully, but ${meta.failedPhotos.length} photo${meta.failedPhotos.length !== 1 ? 's' : ''} could not be retrieved. You may need to re-photograph these POIs.`
-          )
+        const meta = result.restoreMeta
+        if (meta) {
+          if (meta.trailCount === 0 && meta.poiCount === 0) {
+            setPostCompleteMessage(
+              'No data found for this email address. If you used a different email on your other device, please sign in with that address instead.'
+            )
+          } else if (meta.failedPhotos.length > 0) {
+            setPostCompleteMessage(
+              `Restored successfully, but ${meta.failedPhotos.length} photo${meta.failedPhotos.length !== 1 ? 's' : ''} could not be retrieved. You may need to re-photograph these POIs.`
+            )
+          } else {
+            setPostCompleteMessage('Welcome back!')
+          }
         } else {
-          setPostCompleteMessage('Welcome back!')
+          onComplete()
         }
       } else {
-        onComplete()
+        setStep('parish')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -65,7 +75,28 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
     }
   }
 
-  const handleContinue = () => {
+  const handleCreateTrails = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!canCreateTrails) return
+
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const result = await processWelcome(name.trim(), email.trim(), {
+        parishName: parishName.trim(),
+      })
+      setStoredUserEmail(email.trim().toLowerCase())
+      setWelcomeComplete()
+      onComplete()
+      void result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDismissMessage = () => {
     setPostCompleteMessage(null)
     onComplete()
   }
@@ -96,12 +127,78 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
           </div>
           <button
             type="button"
-            onClick={handleContinue}
+            onClick={handleDismissMessage}
             className="w-full min-h-[56px] bg-tmt-teal text-white text-lg font-bold px-4 py-3"
           >
             Continue
           </button>
         </div>
+      </main>
+    )
+  }
+
+  if (step === 'parish') {
+    return (
+      <main className="min-h-screen bg-white p-6 max-w-[680px] mx-auto flex flex-col">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-govuk-text mb-2">
+            Historic Graves Trail
+          </h1>
+          <p className="text-lg text-govuk-muted mb-10">
+            Recording our shared heritage
+          </p>
+
+          <form onSubmit={handleCreateTrails} noValidate>
+            <div className="mb-6">
+              <label htmlFor="parishName" className="sr-only">
+                Parish or place name
+              </label>
+              <input
+                id="parishName"
+                type="text"
+                value={parishName}
+                onChange={(e) => setParishName(e.target.value)}
+                placeholder="Parish or place name (e.g. Ardmore, Clonfert)"
+                className="block w-full min-h-[56px] px-4 py-3 text-lg border-2 border-govuk-border rounded-none"
+                autoComplete="organization"
+              />
+            </div>
+
+            {parishName.trim() && (
+              <div className="mb-6 space-y-1" aria-live="polite">
+                <p className="text-lg text-govuk-text">
+                  Your trails will be: {parishName.trim()} Graveyard Trail and{' '}
+                  {parishName.trim()} Parish Trail
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <p className="mb-4 text-govuk-red" role="alert">
+                {error}
+              </p>
+            )}
+
+            {isSubmitting && (
+              <p className="mb-4 text-govuk-muted text-lg" role="status">
+                Setting up…
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={!canCreateTrails}
+              className="w-full min-h-[56px] bg-tmt-teal text-white text-lg font-bold px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Create my trails"
+            >
+              Create My Trails
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-8 text-sm text-govuk-muted">
+          Your work saves automatically. We&apos;ll never share your details.
+        </p>
       </main>
     )
   }
@@ -117,7 +214,7 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
         </p>
         {/* TODO: Replace with Historic Graves logo SVG — awaiting asset */}
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleContinue} noValidate>
           <div className="mb-6">
             <label htmlFor="name" className="sr-only">
               Your first and last name
@@ -170,11 +267,11 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
 
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canContinue}
             className="w-full min-h-[56px] bg-tmt-teal text-white text-lg font-bold px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Start recording Trails"
+            aria-label="Continue"
           >
-            Start recording Trails
+            Continue
           </button>
         </form>
       </div>
