@@ -432,6 +432,7 @@ export async function generateBrochurePdf(
     
     // Hero photo at top (~40% of page height)
     const orientedBlob = await fixOrientation(poi.thumbnailBlob)
+    console.log('[PDF] fixOrientation result:', { size: orientedBlob.size, type: orientedBlob.type })
     const photoBytes = await blobToUint8Array(orientedBlob)
     const photoImg = isPng(orientedBlob)
       ? await doc.embedPng(photoBytes)
