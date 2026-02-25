@@ -14,6 +14,8 @@ import { fetchStaticMapForPdf } from './mapbox'
 
 const A6_WIDTH = 297.64
 const A6_HEIGHT = 419.53
+const MAP_PAGE_WIDTH = 841
+const MAP_PAGE_HEIGHT = 595
 // Brand teal #3AAFA9 for brochure cover (WCAG contrast with white: use bold for normal-sized text)
 const TEAL = rgb(58 / 255, 175 / 255, 169 / 255)
 const NEAR_BLACK = rgb(11 / 255, 12 / 255, 12 / 255)
@@ -596,42 +598,42 @@ export async function generateBrochurePdf(
     })
   }
 
-  const mapPage = doc.addPage([A6_WIDTH, A6_HEIGHT])
+  const mapPage = doc.addPage([MAP_PAGE_WIDTH, MAP_PAGE_HEIGHT])
   const mapHeaderH = 35
   mapPage.drawRectangle({
     x: 0,
-    y: A6_HEIGHT - mapHeaderH,
-    width: A6_WIDTH,
+    y: MAP_PAGE_HEIGHT - mapHeaderH,
+    width: MAP_PAGE_WIDTH,
     height: mapHeaderH,
     color: TEAL,
   })
   mapPage.drawText('MAP', {
     x: 20,
-    y: A6_HEIGHT - mapHeaderH + 10,
+    y: MAP_PAGE_HEIGHT - mapHeaderH + 10,
     size: 14,
     font: helveticaBold,
     color: WHITE,
   })
 
-  // Map area: full page width, at least half page height
-  const mapAreaWidth = A6_WIDTH - 40
-  const mapAreaHeight = A6_HEIGHT - mapHeaderH - 40
-  const minMapHeight = A6_HEIGHT / 2
-  const mapWidthPx = 1280
-  const mapHeightPx = Math.max(640, Math.ceil(mapWidthPx * (minMapHeight / mapAreaWidth)))
+  const mapMargin = 12
+  const mapAreaWidth = MAP_PAGE_WIDTH - mapMargin * 2
+  const mapAreaHeight = MAP_PAGE_HEIGHT - mapHeaderH - mapMargin * 2
 
   const mapBlob = await fetchStaticMapForPdf(pois, {
-    width: mapWidthPx,
-    height: mapHeightPx,
+    width: 1200,
+    height: 700,
   })
   if (mapBlob) {
     try {
       const mapImg = await embedImage(doc, mapBlob)
-      const mapScale = mapAreaWidth / mapImg.width
+      const mapScale = Math.min(
+        mapAreaWidth / mapImg.width,
+        mapAreaHeight / mapImg.height
+      )
       const mapW = mapImg.width * mapScale
-      const mapH = Math.min(mapImg.height * mapScale, mapAreaHeight)
-      const mapX = (A6_WIDTH - mapW) / 2
-      const mapY = A6_HEIGHT - mapHeaderH - 20 - mapH
+      const mapH = mapImg.height * mapScale
+      const mapX = (MAP_PAGE_WIDTH - mapW) / 2
+      const mapY = MAP_PAGE_HEIGHT - mapHeaderH - mapMargin - mapH
 
       mapPage.drawImage(mapImg, {
         x: mapX,
@@ -641,10 +643,10 @@ export async function generateBrochurePdf(
       })
     } catch (err) {
       console.error('Failed to embed map image:', err)
-      drawMapFallback(mapPage, mapHeaderH, helvetica, A6_WIDTH, A6_HEIGHT)
+      drawMapFallback(mapPage, mapHeaderH, helvetica, MAP_PAGE_WIDTH, MAP_PAGE_HEIGHT)
     }
   } else {
-    drawMapFallback(mapPage, mapHeaderH, helvetica, A6_WIDTH, A6_HEIGHT)
+    drawMapFallback(mapPage, mapHeaderH, helvetica, MAP_PAGE_WIDTH, MAP_PAGE_HEIGHT)
   }
 
   const pdfBytes = await doc.save()

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { PDFDocument } from 'pdf-lib'
 import type { BrochureSetup } from '../types'
 import { db } from '../db/database'
 import { createUserProfile } from '../db/userProfile'
@@ -223,6 +224,62 @@ describe('pdfExport', () => {
     const pdfBytes = new Uint8Array(await pdf.arrayBuffer())
     const pdfText = new TextDecoder().decode(pdfBytes)
     expect(pdfText).toMatch(/\/Subtype\s*\/Image/)
+  })
+
+  it('map page is landscape (841x595pt) with 1200x700 map image', async () => {
+    const trail = { id: 'test', groupCode: 't', trailType: 'parish' as const, displayName: 'T Parish', createdAt: '', nextSequence: 2 }
+    const setup: BrochureSetup = {
+      id: 'test',
+      trailId: 'test',
+      coverTitle: 'Test Parish Trail',
+      coverPhotoBlob: null,
+      groupName: 'Test',
+      creditsText: 'Credits',
+      introText: 'Intro',
+      funderLogos: [],
+      mapBlob: null,
+      updatedAt: new Date().toISOString(),
+    }
+    const poisWithGps = [
+      {
+        id: 'test-p-001',
+        trailId: 'test',
+        groupCode: 'test',
+        trailType: 'parish' as const,
+        sequence: 1,
+        filename: 'test.jpg',
+        photoBlob: mockBlob,
+        thumbnailBlob: mockBlob,
+        latitude: 53.27,
+        longitude: -8.5,
+        accuracy: 10,
+        capturedAt: new Date().toISOString(),
+        siteName: 'Parish POI',
+        category: 'Other' as const,
+        description: '',
+        story: 'Story',
+        url: '',
+        condition: 'Good' as const,
+        notes: '',
+        completed: true,
+        rotation: 0 as const,
+      },
+    ]
+
+    const pdf = await generateBrochurePdf(trail, setup, poisWithGps)
+    const doc = await PDFDocument.load(new Uint8Array(await pdf.arrayBuffer()))
+    const pages = doc.getPages()
+    const mapPage = pages[pages.length - 1]!
+
+    expect(mapPage.getWidth()).toBe(841)
+    expect(mapPage.getHeight()).toBe(595)
+
+    const mapCalls = vi.mocked((await import('./mapbox')).fetchStaticMapForPdf).mock.calls.filter(
+      (c) => c[0].length === 1 && c[0][0].trailId === 'test'
+    )
+    const lastMapCall = mapCalls[mapCalls.length - 1]
+    expect(lastMapCall?.[1]?.width).toBe(1200)
+    expect(lastMapCall?.[1]?.height).toBe(700)
   })
 
   it('generates PDF with text-only cover when photo is missing', async () => {
