@@ -47,14 +47,22 @@ vi.mock('../lib/supabase', () => {
     supabase: {
       from: (table: string) => ({
         select: () => ({
-          eq: () => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars -- eq chain params
+          eq: (col: string, val: unknown) => {
             if (table === 'user_profile') {
               return {
                 single: () => Promise.resolve({ data: mockProfile }),
               }
             }
             if (table === 'trails') {
-              return Promise.resolve({ data: [mockTrail] })
+              return {
+                eq: (col2: string, val2: unknown) => {
+                  if (col2 === 'archived' && val2 === false) {
+                    return Promise.resolve({ data: [mockTrail] })
+                  }
+                  return Promise.resolve({ data: [] })
+                },
+              }
             }
             if (table === 'pois') {
               return Promise.resolve({ data: [mockPoi] })

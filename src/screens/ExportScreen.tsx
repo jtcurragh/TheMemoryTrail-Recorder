@@ -11,6 +11,7 @@ import { ImportButton } from '../components/ImportButton'
 import { ImportResultModal } from '../components/ImportResultModal'
 import { useImport } from '../hooks/useImport'
 import { slugifyForFilename } from '../utils/groupCode'
+import { archiveTrailInSupabase } from '../db/archive'
 import type { UserProfile, Trail } from '../types'
 
 const BROCHURE_TRAIL_KEY = 'hgt_brochure_trail_id'
@@ -49,6 +50,8 @@ export function ExportScreen() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
   const [archiveSuccess, setArchiveSuccess] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+  const [offlineMessage, setOfflineMessage] = useState<string | null>(null)
 
   const { isImporting, importResult, conflictPending, triggerImport, resolveConflict, resetImport } = useImport()
 
@@ -172,14 +175,40 @@ export function ExportScreen() {
     }
   }
 
-  const handleArchiveConfirm = () => {
+  const handleArchiveClick = () => {
+    setArchiveError(null)
+    setOfflineMessage(null)
+    if (!navigator.onLine) {
+      setOfflineMessage(
+        'You must be online to archive a trail. Please check your connection and try again.'
+      )
+      return
+    }
+    setShowArchiveConfirm(true)
+  }
+
+  const handleArchiveConfirm = async () => {
     setShowArchiveConfirm(false)
-    setArchiveSuccess(true)
     setArchiving(true)
-    // TODO: Supabase archived status flag and sync exclusion logic to be implemented in a separate branch
-    setTimeout(() => {
-      void clearAllData()
-    }, 2000)
+    setArchiveError(null)
+
+    const trails = [graveyardTrail, parishTrail].filter((t): t is Trail => t != null)
+    const trailIds = trails.map((t) => t.id)
+
+    try {
+      for (const trailId of trailIds) {
+        await archiveTrailInSupabase(trailId)
+      }
+      setArchiveSuccess(true)
+      setTimeout(() => {
+        void clearAllData()
+      }, 2000)
+    } catch {
+      setArchiveError(
+        'Archive failed — please check your connection and try again. Your local data has not been cleared.'
+      )
+      setArchiving(false)
+    }
   }
 
   const totalPois = graveyardCount + parishCount
@@ -410,22 +439,50 @@ export function ExportScreen() {
           </label>
         </div>
 
+        {offlineMessage && (
+          <p className="mb-4 text-[#d4351c] font-bold" role="alert">
+            {offlineMessage}
+          </p>
+        )}
+        {archiveError && (
+          <p className="mb-4 text-[#d4351c] font-bold" role="alert">
+            {archiveError}
+          </p>
+        )}
+        {archiveSuccess && (
+          <p className="mb-4 text-govuk-green font-bold" role="status">
+            Trail archived successfully. Your data is safely stored in the cloud.
+          </p>
+        )}
         <button
           type="button"
-          onClick={() => setShowArchiveConfirm(true)}
+          onClick={handleArchiveClick}
           disabled={!archiveReady || archiving}
-          className={`min-h-[56px] w-full px-6 font-bold text-lg text-white ${
+          className={`min-h-[56px] w-full px-6 font-bold text-lg text-white flex items-center justify-center gap-2 ${
             archiveReady && !archiving
               ? 'bg-[#c0392b] hover:opacity-90 focus:outline-none focus:ring-[3px] focus:ring-[#ffdd00] focus:ring-offset-2'
               : 'opacity-50 cursor-not-allowed bg-[#c0392b]'
           }`}
           aria-label={
-            archiveReady
-              ? 'Complete & Archive Trail'
-              : 'Tick both checkboxes above to enable archive'
+            archiving
+              ? 'Archiving trail'
+              : archiveReady
+                ? 'Complete & Archive Trail'
+                : 'Tick both checkboxes above to enable archive'
           }
+          aria-live="polite"
         >
-          Complete & Archive Trail
+          {archiving ? (
+            <>
+              <span
+                className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"
+                aria-hidden
+              />
+              Archiving...
+            </>
+          ) : (
+            'Complete & Archive Trail'
+          )}
         </button>
       </section>
 
@@ -477,19 +534,6 @@ export function ExportScreen() {
         </div>
       )}
 
-      {archiveSuccess && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="bg-white p-6 max-w-md rounded shadow-lg text-center">
-            <p className="text-lg font-bold text-govuk-text">
-              Trail archived successfully. Your data is safely stored in the cloud.
-            </p>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

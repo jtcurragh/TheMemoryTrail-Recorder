@@ -187,6 +187,7 @@ async function restoreReturningUser(
     .from('trails')
     .select('*')
     .eq('group_code', profile.groupCode)
+    .eq('archived', false)
 
   const trailCount = trails?.length ?? 0
   const failedPhotos: string[] = []
@@ -210,11 +211,14 @@ async function restoreReturningUser(
       .select('*')
       .eq('group_code', profile.groupCode)
 
-    if (pois && pois.length > 0) {
-      poiCount = pois.length
-      const total = pois.length
-      for (let i = 0; i < pois.length; i++) {
-        const p = pois[i]
+    const trailIds = new Set(trails.map((t) => t.id))
+    const filteredPois = (pois ?? []).filter((p) => trailIds.has(p.trail_id))
+
+    if (filteredPois.length > 0) {
+      poiCount = filteredPois.length
+      const total = filteredPois.length
+      for (let i = 0; i < filteredPois.length; i++) {
+        const p = filteredPois[i]
         options?.onProgress?.(i + 1, total)
 
         let photoBlob: ArrayBuffer | null = null

@@ -6,8 +6,14 @@ import { db } from '../db/database'
 import { createUserProfile } from '../db/userProfile'
 import { createTrail } from '../db/trails'
 import { ExportScreen } from './ExportScreen'
+import { setStoredUserEmail } from '../utils/storage'
 
 const BROCHURE_TRAIL_KEY = 'hgt_brochure_trail_id'
+
+const mockArchiveTrailInSupabase = vi.fn()
+vi.mock('../db/archive', () => ({
+  archiveTrailInSupabase: (id: string) => mockArchiveTrailInSupabase(id),
+}))
 
 function TestWrapper() {
   return (
@@ -23,6 +29,8 @@ describe('ExportScreen', () => {
     localStorage.clear()
     await db.delete()
     await db.open()
+    mockArchiveTrailInSupabase.mockResolvedValue(undefined)
+    setStoredUserEmail('test@example.com')
   })
 
   it('renders sections in correct order: Digital Brochure first, ZIP second, Archive third', async () => {
@@ -193,6 +201,97 @@ describe('ExportScreen', () => {
     expect(profile?.email).toBe('test@example.com')
   })
 
+  it('shows loading state during archive', async () => {
+    let resolveArchive: () => void
+    mockArchiveTrailInSupabase.mockImplementation(
+      () => new Promise<void>((r) => { resolveArchive = r })
+    )
+
+    await createUserProfile({
+      email: 'test@example.com',
+      name: 'Test',
+      groupName: 'Test Parish',
+      groupCode: 'test',
+    })
+    await createTrail({
+      groupCode: 'test',
+      trailType: 'graveyard',
+      displayName: 'Test Graveyard Trail',
+    })
+
+    render(<TestWrapper />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /complete & archive trail/i })).toBeInTheDocument()
+    })
+
+    const zipCheckbox = screen.getByRole('checkbox', {
+      name: /i have downloaded the zip export/i,
+    })
+    const pdfCheckbox = screen.getByRole('checkbox', {
+      name: /i have generated and saved the digital brochure pdf/i,
+    })
+    await userEvent.click(zipCheckbox)
+    await userEvent.click(pdfCheckbox)
+
+    const archiveButton = screen.getByRole('button', { name: /complete.*archive trail|tick both checkboxes/i })
+    await userEvent.click(archiveButton)
+
+    const confirmButton = screen.getByRole('button', { name: /yes, archive trail/i })
+    await userEvent.click(confirmButton)
+
+    const archivingButton = screen.getByRole('button', { name: /archiving trail/i })
+    expect(archivingButton).toBeDisabled()
+    expect(archivingButton).toHaveTextContent('Archiving...')
+
+    resolveArchive!()
+  })
+
+  it('shows error and does not clear data if archive fails', async () => {
+    mockArchiveTrailInSupabase.mockRejectedValue(new Error('Network error'))
+
+    await createUserProfile({
+      email: 'test@example.com',
+      name: 'Test',
+      groupName: 'Test Parish',
+      groupCode: 'test',
+    })
+    await createTrail({
+      groupCode: 'test',
+      trailType: 'graveyard',
+      displayName: 'Test Graveyard Trail',
+    })
+
+    render(<TestWrapper />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /complete & archive trail/i })).toBeInTheDocument()
+    })
+
+    const zipCheckbox = screen.getByRole('checkbox', {
+      name: /i have downloaded the zip export/i,
+    })
+    const pdfCheckbox = screen.getByRole('checkbox', {
+      name: /i have generated and saved the digital brochure pdf/i,
+    })
+    await userEvent.click(zipCheckbox)
+    await userEvent.click(pdfCheckbox)
+
+    const archiveButton = screen.getByRole('button', { name: /complete.*archive trail|tick both checkboxes/i })
+    await userEvent.click(archiveButton)
+
+    const confirmButton = screen.getByRole('button', { name: /yes, archive trail/i })
+    await userEvent.click(confirmButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/archive failed/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText(/your local data has not been cleared/i)).toBeInTheDocument()
+
+    const profile = await db.userProfile.get('default')
+    expect(profile).toBeDefined()
+  })
+
   it('confirm triggers Dexie clear and shows success message', async () => {
     const reloadMock = vi.fn()
     const originalLocation = window.location
@@ -249,6 +348,47 @@ describe('ExportScreen', () => {
       value: originalLocation,
       writable: true,
     })
+  })
+
+  it('offline check blocks archive flow and shows appropriate message', async () => {
+    const originalOnLine = navigator.onLine
+    Object.defineProperty(navigator, 'onLine', { value: false, writable: true })
+
+    await createUserProfile({
+      email: 'test@example.com',
+      name: 'Test',
+      groupName: 'Test Parish',
+      groupCode: 'test',
+    })
+    await createTrail({
+      groupCode: 'test',
+      trailType: 'graveyard',
+      displayName: 'Test Graveyard Trail',
+    })
+
+    render(<TestWrapper />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /complete & archive trail/i })).toBeInTheDocument()
+    })
+
+    const zipCheckbox = screen.getByRole('checkbox', {
+      name: /i have downloaded the zip export/i,
+    })
+    const pdfCheckbox = screen.getByRole('checkbox', {
+      name: /i have generated and saved the digital brochure pdf/i,
+    })
+    await userEvent.click(zipCheckbox)
+    await userEvent.click(pdfCheckbox)
+
+    const archiveButton = screen.getByRole('button', { name: /complete.*archive trail|tick both checkboxes/i })
+    await userEvent.click(archiveButton)
+
+    expect(screen.getByText(/you must be online to archive/i)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(mockArchiveTrailInSupabase).not.toHaveBeenCalled()
+
+    Object.defineProperty(navigator, 'onLine', { value: originalOnLine, writable: true })
   })
 
   it('restores selected brochure trail from localStorage when it matches a valid trail', async () => {

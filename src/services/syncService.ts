@@ -1,3 +1,12 @@
+/**
+ * Supabase migration for archived trails (run manually in Supabase SQL Editor):
+ *
+ * ALTER TABLE trails
+ * ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
+ *
+ * ALTER TABLE trails
+ * ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+ */
 import { supabase } from '../lib/supabase'
 import { getStoredUserEmail } from '../utils/storage'
 import { db } from '../db/database'
