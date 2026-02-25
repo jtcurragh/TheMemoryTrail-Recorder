@@ -53,6 +53,15 @@ function createJpegWithExifOrientation(
   return result
 }
 
+const minimalPng = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde, 0x00, 0x00, 0x00,
+  0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8, 0xff, 0xff, 0x3f,
+  0x00, 0x05, 0xfe, 0x02, 0xfe, 0xdc, 0xcc, 0x59, 0xe7, 0x00, 0x00, 0x00,
+  0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+])
+
 const minimalJpeg = new Uint8Array([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
   0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
@@ -406,5 +415,61 @@ describe('pdfExport', () => {
     )
 
     consoleSpy.mockRestore()
+  })
+
+  it('renders all 3 funder logos when provided, including those with wrong/empty blob type', async () => {
+    const trail = {
+      id: 'test',
+      groupCode: 'test',
+      trailType: 'graveyard' as const,
+      displayName: 'Test Trail',
+      createdAt: '',
+      nextSequence: 9,
+    }
+    const pois = Array.from({ length: 8 }, (_, i) => ({
+      id: `test-g-00${i + 1}`,
+      trailId: 'test',
+      groupCode: 'test',
+      trailType: 'graveyard' as const,
+      sequence: i + 1,
+      filename: `test-g-00${i + 1}.jpg`,
+      photoBlob: mockBlob,
+      thumbnailBlob: mockBlob,
+      latitude: 53.27 + i * 0.01,
+      longitude: -8.5 - i * 0.01,
+      accuracy: 10,
+      capturedAt: new Date().toISOString(),
+      siteName: `POI ${i + 1}`,
+      category: 'Other' as const,
+      description: '',
+      story: 'Story',
+      url: '',
+      condition: 'Good' as const,
+      notes: '',
+      completed: true,
+      rotation: 0 as const,
+    }))
+    const setup: BrochureSetup = {
+      id: 'test',
+      trailId: 'test',
+      coverTitle: 'Test Trail',
+      coverPhotoBlob: null,
+      groupName: 'Test',
+      creditsText: 'Credits',
+      introText: 'Intro text.',
+      funderLogos: [
+        new Blob([minimalPng], { type: 'image/png' }),
+        new Blob([minimalPng], { type: '' }),
+        new Blob([minimalPng], { type: 'application/octet-stream' }),
+      ],
+      mapBlob: null,
+      updatedAt: new Date().toISOString(),
+    }
+
+    const pdf = await generateBrochurePdf(trail, setup, pois)
+    const pdfBytes = new Uint8Array(await pdf.arrayBuffer())
+    const pdfText = new TextDecoder().decode(pdfBytes)
+    const imageCount = (pdfText.match(/\/Subtype\s*\/Image/g) ?? []).length
+    expect(imageCount).toBeGreaterThanOrEqual(12)
   })
 })

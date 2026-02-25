@@ -259,6 +259,17 @@ function isPng(blob: Blob): boolean {
   return blob.type === 'image/png'
 }
 
+/** Detect PNG from magic bytes when blob.type is empty or generic (e.g. from URL fetch). */
+function isPngFromBytes(bytes: Uint8Array): boolean {
+  return (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  )
+}
+
 /**
  * Select the best image blob for PDF generation: full-resolution photoBlob
  * when available, otherwise thumbnailBlob. Exported for testing.
@@ -564,6 +575,7 @@ export async function generateBrochurePdf(
   const logoGridStartX = (A6_WIDTH - logoGridWidth) / 2
 
   let logoY = fundedHeaderY - 15
+  let logosSkipped = 0
   for (let i = 0; i < setup.funderLogos.length; i++) {
     const col = i % logosPerRow
     const row = Math.floor(i / logosPerRow)
@@ -571,9 +583,18 @@ export async function generateBrochurePdf(
     const cellY = logoY - row * (logoCellSize + logoPadding) - logoCellSize
     try {
       const logoBytes = await blobToUint8Array(setup.funderLogos[i])
-      const logoImg = isPng(setup.funderLogos[i])
-        ? await doc.embedPng(logoBytes)
-        : await doc.embedJpg(logoBytes)
+      const looksLikePng =
+        isPng(setup.funderLogos[i]) || isPngFromBytes(logoBytes)
+      let logoImg: PDFImage
+      try {
+        logoImg = looksLikePng
+          ? await doc.embedPng(logoBytes)
+          : await doc.embedJpg(logoBytes)
+      } catch (firstErr) {
+        logoImg = looksLikePng
+          ? await doc.embedJpg(logoBytes)
+          : await doc.embedPng(logoBytes)
+      }
       const scale = Math.min(logoCellSize / logoImg.width, logoCellSize / logoImg.height)
       const imgW = logoImg.width * scale
       const imgH = logoImg.height * scale
@@ -585,9 +606,18 @@ export async function generateBrochurePdf(
         width: imgW,
         height: imgH,
       })
-    } catch {
-      /* Skip logo if embedding fails (e.g. invalid image) */
+    } catch (err) {
+      logosSkipped++
+      console.error(
+        `[pdfExport] Funder logo ${i + 1} failed to embed (blob.type=${setup.funderLogos[i].type}):`,
+        err
+      )
     }
+  }
+  if (logosSkipped > 0) {
+    console.warn(
+      `[pdfExport] ${logosSkipped} of ${setup.funderLogos.length} funder logo(s) could not be embedded in the PDF`
+    )
   }
   logoY -= setup.funderLogos.length > 0 ? Math.ceil(setup.funderLogos.length / logosPerRow) * (logoCellSize + logoPadding) : 0
 
