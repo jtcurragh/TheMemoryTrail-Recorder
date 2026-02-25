@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { BrochureSetup } from '../types'
 import { db } from '../db/database'
 import { createUserProfile } from '../db/userProfile'
@@ -9,6 +9,13 @@ import { getBrochureSetup } from '../db/brochureSetup'
 import { saveBrochureSetup } from '../db/brochureSetup'
 import { getTrailById } from '../db/trails'
 import { generateBrochurePdf } from './pdfExport'
+
+vi.mock('./thumbnail', () => ({
+  fixOrientation: vi.fn(async (blob: Blob) => {
+    const buf = await blob.arrayBuffer()
+    return new Blob([buf], { type: 'image/jpeg' })
+  }),
+}))
 
 const minimalJpeg = new Uint8Array([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
@@ -86,6 +93,53 @@ describe('pdfExport', () => {
     expect(pdf).toBeInstanceOf(Blob)
     expect(pdf.type).toBe('application/pdf')
     expect(pdf.size).toBeGreaterThan(100)
+  })
+
+  it('applies poi.rotation when drawing POI photos (rotation=90 produces rotated image)', async () => {
+    const trail = { id: 'test-graveyard', groupCode: 'test', trailType: 'graveyard' as const, displayName: 'Test Graveyard Trail', createdAt: '', nextSequence: 2 }
+    const setup: BrochureSetup = {
+      id: 'test-graveyard',
+      trailId: 'test-graveyard',
+      coverTitle: 'Test Heritage Trail',
+      coverPhotoBlob: mockBlob,
+      groupName: 'Test Parish',
+      creditsText: 'Credits',
+      introText: 'Introduction text.',
+      funderLogos: [],
+      mapBlob: null,
+      updatedAt: '2025-02-20T12:00:00Z',
+    }
+    const basePoi = {
+      id: 'test-g-001',
+      trailId: 'test-graveyard',
+      groupCode: 'test',
+      trailType: 'graveyard' as const,
+      sequence: 1,
+      filename: 'test-g-001.jpg',
+      photoBlob: mockBlob,
+      thumbnailBlob: mockBlob,
+      latitude: 53,
+      longitude: -8,
+      accuracy: 10,
+      capturedAt: '2025-02-20T12:00:00Z',
+      siteName: 'Rotated POI',
+      category: 'Other' as const,
+      description: 'Description',
+      story: 'Story',
+      url: '',
+      condition: 'Good' as const,
+      notes: '',
+      completed: true,
+    }
+
+    const pdfWithRotation = await generateBrochurePdf(trail, setup, [{ ...basePoi, rotation: 90 }])
+    const pdfWithoutRotation = await generateBrochurePdf(trail, setup, [{ ...basePoi, rotation: 0 }])
+
+    const bytesWith = new Uint8Array(await pdfWithRotation.arrayBuffer())
+    const bytesWithout = new Uint8Array(await pdfWithoutRotation.arrayBuffer())
+
+    // Rotation affects the content stream; PDFs must differ when rotation differs
+    expect(bytesWith).not.toEqual(bytesWithout)
   })
 
   it('generates PDF with text-only cover when photo is missing', async () => {

@@ -2,6 +2,8 @@ import {
   PDFDocument,
   StandardFonts,
   rgb,
+  degrees,
+  rotateRectangle,
   type PDFFont,
   type PDFImage,
   type PDFPage,
@@ -438,24 +440,31 @@ export async function generateBrochurePdf(
       ? await doc.embedPng(photoBytes)
       : await doc.embedJpg(photoBytes)
     
+    const rotation = (poi.rotation ?? 0) as 0 | 90 | 180 | 270
+    const effectiveW = rotation === 90 || rotation === 270 ? photoImg.height : photoImg.width
+    const effectiveH = rotation === 90 || rotation === 270 ? photoImg.width : photoImg.height
     const photoHeight = A6_HEIGHT * 0.4
     const photoScale = Math.min(
-      A6_WIDTH / photoImg.width,
-      photoHeight / photoImg.height
+      A6_WIDTH / effectiveW,
+      photoHeight / effectiveH
     )
-    const photoW = Math.min(photoImg.width * photoScale, A6_WIDTH)
-    const photoH = Math.min(photoImg.height * photoScale, photoHeight)
+    const photoW = Math.min(effectiveW * photoScale, A6_WIDTH)
+    const photoH = Math.min(effectiveH * photoScale, photoHeight)
     const photoX = (A6_WIDTH - photoW) / 2
-    // pdf-lib origin is bottom-left: y = A6_HEIGHT - photoH places image flush to top
     const photoY = A6_HEIGHT - photoH
 
-    // Do not apply poi.rotation: thumbnailBlob is already correctly oriented
-    // (EXIF fixed at capture; user rotation would double-apply)
+    const rect = rotateRectangle(
+      { x: photoX, y: photoY, width: photoW, height: photoH },
+      0,
+      rotation
+    )
+
     poiPage.drawImage(photoImg, {
-      x: photoX,
-      y: photoY,
-      width: photoW,
-      height: photoH,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      ...(rotation !== 0 && { rotate: degrees(rotation) }),
     })
 
     // Title section below photo
