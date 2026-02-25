@@ -32,6 +32,7 @@ export interface WelcomeResult {
 export interface ProcessWelcomeOptions {
   onProgress?: (current: number, total: number) => void
   parishName?: string
+  graveyardName?: string
 }
 
 /**
@@ -47,7 +48,7 @@ export async function processWelcome(
   const nameTrim = name.trim()
 
   if (!supabase) {
-    return createNewUserLocalOnly(nameTrim, emailNorm, options?.parishName)
+    return createNewUserLocalOnly(nameTrim, emailNorm, options?.parishName, options?.graveyardName)
   }
 
   const { data: existingProfile } = await supabase
@@ -62,34 +63,45 @@ export async function processWelcome(
     })
   }
 
-  return createNewUser(nameTrim, emailNorm, options?.parishName)
+  return createNewUser(nameTrim, emailNorm, options?.parishName, options?.graveyardName)
 }
 
 async function createNewUserLocalOnly(
   name: string,
   email: string,
-  parishName?: string
+  parishName?: string,
+  graveyardName?: string
 ): Promise<WelcomeResult> {
-  const groupName = parishName?.trim() || `${name}'s recordings`
-  const groupCode = parishName?.trim()
-    ? deriveGroupCode(parishName)
+  const parish = parishName?.trim()
+  const graveyard = graveyardName?.trim()
+  const groupName = parish || `${name}'s recordings`
+  const groupCode = parish
+    ? deriveGroupCode(parish)
     : deriveGroupCodeFromEmail(email)
   const profile = await createUserProfile({
     email,
     name,
     groupName,
     groupCode,
+    graveyardName: graveyard || undefined,
   })
+
+  const graveyardDisplayName = graveyard
+    ? `${graveyard} Graveyard Trail`
+    : `${groupName} Graveyard Trail`
+  const parishDisplayName = parish
+    ? `${parish} Parish Trail`
+    : `${groupName} Parish Trail`
 
   await createTrail({
     groupCode,
     trailType: 'graveyard',
-    displayName: `${groupName} Graveyard Trail`,
+    displayName: graveyardDisplayName,
   })
   await createTrail({
     groupCode,
     trailType: 'parish',
-    displayName: `${groupName} Parish Trail`,
+    displayName: parishDisplayName,
   })
 
   return { isReturningUser: false, profile }
@@ -98,17 +110,21 @@ async function createNewUserLocalOnly(
 async function createNewUser(
   name: string,
   email: string,
-  parishName?: string
+  parishName?: string,
+  graveyardName?: string
 ): Promise<WelcomeResult> {
-  const groupName = parishName?.trim() || `${name}'s recordings`
-  const groupCode = parishName?.trim()
-    ? deriveGroupCode(parishName)
+  const parish = parishName?.trim()
+  const graveyard = graveyardName?.trim()
+  const groupName = parish || `${name}'s recordings`
+  const groupCode = parish
+    ? deriveGroupCode(parish)
     : deriveGroupCodeFromEmail(email)
   const profile = await createUserProfile({
     email,
     name,
     groupName,
     groupCode,
+    graveyardName: graveyard || undefined,
   })
 
   await supabase!.from('user_profile').upsert(
@@ -117,19 +133,27 @@ async function createNewUser(
       name: profile.name,
       group_name: profile.groupName,
       group_code: profile.groupCode,
+      graveyard_name: profile.graveyardName ?? null,
     },
     { onConflict: 'email' }
   )
 
+  const graveyardDisplayName = graveyard
+    ? `${graveyard} Graveyard Trail`
+    : `${groupName} Graveyard Trail`
+  const parishDisplayName = parish
+    ? `${parish} Parish Trail`
+    : `${groupName} Parish Trail`
+
   await createTrail({
     groupCode: profile.groupCode,
     trailType: 'graveyard',
-    displayName: `${groupName} Graveyard Trail`,
+    displayName: graveyardDisplayName,
   })
   await createTrail({
     groupCode: profile.groupCode,
     trailType: 'parish',
-    displayName: `${groupName} Parish Trail`,
+    displayName: parishDisplayName,
   })
 
   return { isReturningUser: false, profile }
@@ -145,6 +169,7 @@ async function restoreReturningUser(
     name: string
     group_name: string
     group_code: string
+    graveyard_name?: string | null
   },
   name: string,
   email: string,
@@ -155,6 +180,7 @@ async function restoreReturningUser(
     name: name || supabaseProfile.name,
     groupName: supabaseProfile.group_name,
     groupCode: supabaseProfile.group_code,
+    graveyardName: supabaseProfile.graveyard_name ?? undefined,
   })
 
   const { data: trails } = await supabase!

@@ -14,6 +14,7 @@ export async function createUserProfile(input: {
   name: string
   groupName?: string
   groupCode?: string
+  graveyardName?: string
 }): Promise<UserProfile> {
   if (!input.email?.trim()) {
     throw new Error('Email is required')
@@ -27,6 +28,7 @@ export async function createUserProfile(input: {
     name: input.name.trim(),
     groupName,
     groupCode,
+    graveyardName: input.graveyardName,
     createdAt: new Date().toISOString(),
   }
 

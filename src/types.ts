@@ -42,6 +42,7 @@ export interface UserProfile {
   name: string
   groupName: string
   groupCode: string
+  graveyardName?: string
   createdAt: string
 }
 

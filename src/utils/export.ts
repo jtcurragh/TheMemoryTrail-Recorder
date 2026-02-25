@@ -158,16 +158,16 @@ export async function exportTrailsToZip(trails: Trail[]): Promise<Blob> {
 }
 
 /**
- * Derives the ZIP export filename from the graveyard trail's displayName.
- * Strips " Graveyard Trail" suffix and sanitises via deriveGroupCode.
+ * Derives the ZIP export filename from the parish name (profile.groupName).
+ * Uses deriveGroupCode on parish, not trail displayName.
  */
 export function getExportZipFilename(
   profile: UserProfile,
-  trails: Trail[]
+  _trails: Trail[]
 ): string {
-  const graveyard = trails.find((t) => t.trailType === 'graveyard')
-  const baseName = graveyard?.displayName?.replace(/\s+Graveyard Trail$/i, '') ?? ''
-  const placeSlug = baseName ? deriveGroupCode(baseName) : ''
+  const placeSlug = profile.groupName?.trim()
+    ? deriveGroupCode(profile.groupName)
+    : ''
   const slug = placeSlug || profile.groupCode
   return `${slug}_historic_graves_trail_export.zip`
 }

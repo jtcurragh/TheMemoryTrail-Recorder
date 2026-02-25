@@ -87,7 +87,7 @@ describe('WelcomeScreen', () => {
     ).toBeInTheDocument()
   })
 
-  it('for new email: shows parish field after Continue, then creates user with parish on Create My Trails', async () => {
+  it('for new email: shows graveyard and parish fields after Continue, then creates user with both on Create My Trails', async () => {
     const user = userEvent.setup()
     const onComplete = vi.fn()
     vi.mocked(welcomeService.checkEmailExists).mockResolvedValue(false)
@@ -103,13 +103,15 @@ describe('WelcomeScreen', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }))
 
     await waitFor(() => {
+      expect(screen.getByPlaceholderText(/graveyard name/i)).toBeInTheDocument()
       expect(screen.getByPlaceholderText(/parish or place name/i)).toBeInTheDocument()
     })
 
+    await user.type(screen.getByPlaceholderText(/graveyard name/i), "St. Declan's")
     await user.type(screen.getByPlaceholderText(/parish or place name/i), 'Ardmore')
 
     await waitFor(() => {
-      expect(screen.getByText(/Ardmore Graveyard Trail and Ardmore Parish Trail/i)).toBeInTheDocument()
+      expect(screen.getByText(/St\. Declan's Graveyard Trail and Ardmore Parish Trail/i)).toBeInTheDocument()
     })
     await user.click(screen.getByRole('button', { name: /create my trails/i }))
 
@@ -117,7 +119,10 @@ describe('WelcomeScreen', () => {
       expect(welcomeService.processWelcome).toHaveBeenCalledWith(
         'Sheila',
         'sheila@example.com',
-        expect.objectContaining({ parishName: 'Ardmore' })
+        expect.objectContaining({
+          graveyardName: "St. Declan's",
+          parishName: 'Ardmore',
+        })
       )
       expect(onComplete).toHaveBeenCalled()
     })
@@ -165,7 +170,7 @@ describe('WelcomeScreen', () => {
     expect(screen.queryByPlaceholderText(/parish or place name/i)).not.toBeInTheDocument()
   })
 
-  it('parish field shows live preview of trail names', async () => {
+  it('graveyard and parish fields show live preview of trail names', async () => {
     const user = userEvent.setup()
     vi.mocked(welcomeService.checkEmailExists).mockResolvedValue(false)
 
@@ -180,13 +185,15 @@ describe('WelcomeScreen', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }))
 
     await waitFor(() => {
+      expect(screen.getByPlaceholderText(/graveyard name/i)).toBeInTheDocument()
       expect(screen.getByPlaceholderText(/parish or place name/i)).toBeInTheDocument()
     })
 
+    await user.type(screen.getByPlaceholderText(/graveyard name/i), 'Clonfert Cathedral')
     await user.type(screen.getByPlaceholderText(/parish or place name/i), 'Clonfert')
 
     await waitFor(() => {
-      expect(screen.getByText(/Clonfert Graveyard Trail and Clonfert Parish Trail/i)).toBeInTheDocument()
+      expect(screen.getByText(/Clonfert Cathedral Graveyard Trail and Clonfert Parish Trail/i)).toBeInTheDocument()
     })
   })
 })

@@ -11,6 +11,7 @@ type Step = 'name-email' | 'parish' | 'done'
 export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [graveyardName, setGraveyardName] = useState('')
   const [parishName, setParishName] = useState('')
   const [step, setStep] = useState<Step>('name-email')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -30,7 +31,10 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
     step === 'name-email'
 
   const canCreateTrails =
-    parishName.trim().length > 0 && !isSubmitting && step === 'parish'
+    graveyardName.trim().length > 0 &&
+    parishName.trim().length > 0 &&
+    !isSubmitting &&
+    step === 'parish'
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,6 +87,7 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
     setError(null)
     try {
       const result = await processWelcome(name.trim(), email.trim(), {
+        graveyardName: graveyardName.trim(),
         parishName: parishName.trim(),
       })
       setStoredUserEmail(email.trim().toLowerCase())
@@ -150,6 +155,20 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
 
           <form onSubmit={handleCreateTrails} noValidate>
             <div className="mb-6">
+              <label htmlFor="graveyardName" className="sr-only">
+                Graveyard name
+              </label>
+              <input
+                id="graveyardName"
+                type="text"
+                value={graveyardName}
+                onChange={(e) => setGraveyardName(e.target.value)}
+                placeholder="Graveyard name (e.g. St. Declan's, Clonfert Cathedral)"
+                className="block w-full min-h-[56px] px-4 py-3 text-lg border-2 border-govuk-border rounded-none"
+                autoComplete="organization"
+              />
+            </div>
+            <div className="mb-6">
               <label htmlFor="parishName" className="sr-only">
                 Parish or place name
               </label>
@@ -164,10 +183,10 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
               />
             </div>
 
-            {parishName.trim() && (
+            {graveyardName.trim() && parishName.trim() && (
               <div className="mb-6 space-y-1" aria-live="polite">
                 <p className="text-lg text-govuk-text">
-                  Your trails will be: {parishName.trim()} Graveyard Trail and{' '}
+                  Your trails will be: {graveyardName.trim()} Graveyard Trail and{' '}
                   {parishName.trim()} Parish Trail
                 </p>
               </div>

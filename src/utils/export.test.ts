@@ -55,12 +55,12 @@ describe('export', () => {
     expect(fileNames).not.toContain('ardmore-g-001.jpg')
   })
 
-  it('uses trail displayName base for ZIP filename, not profile groupName', () => {
+  it('uses parish name (profile.groupName) for ZIP filename, not user name', () => {
     const profile: UserProfile = {
       id: 'default',
       email: 'test@example.com',
-      name: 'Test',
-      groupName: 'Different Parish Name',
+      name: 'Sheila Murphy',
+      groupName: 'Ardmore',
       groupCode: 'ardmore',
       createdAt: new Date().toISOString(),
     }
@@ -69,7 +69,7 @@ describe('export', () => {
         id: 'ardmore-graveyard',
         groupCode: 'ardmore',
         trailType: 'graveyard',
-        displayName: 'Ardmore Graveyard Trail',
+        displayName: "St. Declan's Graveyard Trail",
         createdAt: new Date().toISOString(),
         nextSequence: 2,
       },
@@ -86,6 +86,6 @@ describe('export', () => {
     const filename = getExportZipFilename(profile, trails)
 
     expect(filename).toBe('ardmore_historic_graves_trail_export.zip')
-    expect(filename).not.toContain('different')
+    expect(filename).not.toContain('sheila')
   })
 })
