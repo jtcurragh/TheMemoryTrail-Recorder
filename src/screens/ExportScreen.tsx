@@ -14,10 +14,13 @@ import { useImport } from '../hooks/useImport'
 import { deriveGroupCode, slugifyForFilename } from '../utils/groupCode'
 import type { UserProfile, Trail } from '../types'
 
+const BROCHURE_TRAIL_KEY = 'hgt_brochure_trail_id'
+
 async function clearAllData(): Promise<void> {
   localStorage.removeItem('welcomeComplete')
   localStorage.removeItem('userEmail')
   localStorage.removeItem('activeTrailId')
+  localStorage.removeItem(BROCHURE_TRAIL_KEY)
   try {
     await db.delete()
     // Brief delay so IndexedDB has time to flush before page unload
@@ -59,7 +62,14 @@ export function ExportScreen() {
 
     setGraveyardTrail(graveyard ?? null)
     setParishTrail(parish ?? null)
-    setBrochureTrailId((prev) => prev ?? graveyard?.id ?? parish?.id ?? null)
+
+    const trailIds = trails.map((t) => t.id)
+    const stored = localStorage.getItem(BROCHURE_TRAIL_KEY)
+    const initialId =
+      stored && trailIds.includes(stored)
+        ? stored
+        : graveyard?.id ?? parish?.id ?? null
+    setBrochureTrailId(initialId)
 
     if (graveyard) {
       const pois = await getPOIsByTrailId(graveyard.id, { includeBlobs: false })
@@ -74,6 +84,12 @@ export function ExportScreen() {
   useEffect(() => {
     reloadData()
   }, [])
+
+  useEffect(() => {
+    if (brochureTrailId) {
+      localStorage.setItem(BROCHURE_TRAIL_KEY, brochureTrailId)
+    }
+  }, [brochureTrailId])
 
   useEffect(() => {
     if (!brochureTrailId) return
