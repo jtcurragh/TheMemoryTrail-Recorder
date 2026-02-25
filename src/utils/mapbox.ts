@@ -144,36 +144,3 @@ export async function fetchStaticMapForPdf(
     return null
   }
 }
-
-/**
- * Generate demo static map with sample coordinates
- */
-export async function generateDemoStaticMap(): Promise<Blob | null> {
-  const demoPois: POIRecord[] = []
-  for (let i = 0; i < 8; i++) {
-    demoPois.push({
-      id: `demo-${i}`,
-      trailId: 'demo',
-      groupCode: 'demo',
-      trailType: 'graveyard',
-      sequence: i + 1,
-      filename: `demo-${i}.jpg`,
-      photoBlob: new Blob(),
-      thumbnailBlob: new Blob(),
-      latitude: 52.0 + (i * 0.005), // Spread POIs across ~4km
-      longitude: -7.0 - (i * 0.004),
-      accuracy: 10,
-      capturedAt: new Date().toISOString(),
-      siteName: `Demo POI ${i + 1}`,
-      category: 'Historic Feature',
-      description: '',
-      story: '',
-      url: '',
-      condition: 'Good',
-      notes: '',
-      completed: true,
-      rotation: 0,
-    })
-  }
-  return generateStaticMap(demoPois)
-}

@@ -7,7 +7,6 @@ import { getBrochureSetup } from '../db/brochureSetup'
 import { db } from '../db/database'
 import { exportTrailsToZip, downloadBlob, getExportZipFilename } from '../utils/export'
 import { generateBrochurePdf } from '../utils/pdfExport'
-import { generateDemoBrochureSetup, generateDemoPOIs, generateDemoTrail } from '../utils/demoData'
 import { ImportButton } from '../components/ImportButton'
 import { ImportResultModal } from '../components/ImportResultModal'
 import { useImport } from '../hooks/useImport'
@@ -47,7 +46,6 @@ export function ExportScreen() {
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [clearing, setClearing] = useState(false)
-  const [demoGenerating, setDemoGenerating] = useState(false)
 
   const { isImporting, importResult, conflictPending, triggerImport, resolveConflict, resetImport } = useImport()
 
@@ -140,25 +138,6 @@ export function ExportScreen() {
       )
     } finally {
       setPdfGenerating(false)
-    }
-  }
-
-  const handleGenerateDemoPdf = async () => {
-    setDemoGenerating(true)
-    setPdfError(null)
-    try {
-      const [demoSetup, demoPois, demoTrail] = await Promise.all([
-        generateDemoBrochureSetup(),
-        generateDemoPOIs(),
-        Promise.resolve(generateDemoTrail()),
-      ])
-      const pdf = await generateBrochurePdf(demoTrail, demoSetup, demoPois)
-      downloadBlob(pdf, 'demo-heritage-trail.pdf')
-    } catch (err) {
-      console.error('Demo PDF generation failed:', err)
-      setPdfError('Demo PDF generation failed — please try again.')
-    } finally {
-      setDemoGenerating(false)
     }
   }
 
@@ -371,28 +350,6 @@ export function ExportScreen() {
             )}
           </>
         )}
-      </section>
-
-      <section className="mt-8 pt-8 border-t-2 border-govuk-border">
-        <h2 className="text-lg font-bold text-govuk-text mb-4">
-          Preview Demo Brochure
-        </h2>
-        <p className="text-govuk-text mb-4">
-          Generate a sample 12-page brochure with placeholder content to preview
-          the layout and design. Includes cover page, credits, intro, 8 POI pages,
-          and map page.
-        </p>
-        <button
-          type="button"
-          onClick={handleGenerateDemoPdf}
-          disabled={demoGenerating}
-          className="min-h-[56px] w-full px-6 border-2 border-tmt-teal bg-white text-tmt-teal font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-govuk-background"
-        >
-          {demoGenerating ? 'Generating Demo...' : '📄 Generate Demo Brochure'}
-        </button>
-        <p className="mt-2 text-govuk-muted text-sm text-center">
-          No data required — uses sample Irish heritage content
-        </p>
       </section>
 
       <section className="mt-8 pt-8 border-t-2 border-govuk-border">

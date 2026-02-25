@@ -45,7 +45,7 @@ The Mapbox token used is a **public token** which is safe to expose in client-si
 
 ## How It Works
 
-1. When users generate a demo brochure PDF, the app:
+1. When users generate a brochure PDF, the app:
    - Collects GPS coordinates from all POIs
    - Calculates optimal map center and zoom level
    - Generates a Mapbox Static Image URL with numbered markers
@@ -53,8 +53,6 @@ The Mapbox token used is a **public token** which is safe to expose in client-si
    - Caches it in the brochure setup (IndexedDB)
    - Embeds the cached image in the PDF
 
-2. The map is only regenerated if:
-   - Brochure setup is created/updated
-   - Demo brochure is generated
+2. The map is only regenerated when brochure setup is created or updated.
 
 This minimizes API calls and ensures fast PDF generation.
