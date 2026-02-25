@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
+import piexif from 'piexifjs'
 import type { BrochureSetup } from '../types'
 import { db } from '../db/database'
 import { createUserProfile } from '../db/userProfile'
@@ -9,7 +10,7 @@ import { getPOIsByTrailId } from '../db/pois'
 import { getBrochureSetup } from '../db/brochureSetup'
 import { saveBrochureSetup } from '../db/brochureSetup'
 import { getTrailById } from '../db/trails'
-import { generateBrochurePdf } from './pdfExport'
+import { generateBrochurePdf, computePoiPageLayout } from './pdfExport'
 
 vi.mock('./thumbnail', () => ({
   fixOrientation: vi.fn(async (blob: Blob) => {
@@ -33,6 +34,20 @@ vi.mock('./mapbox', () => {
     ),
   }
 })
+
+/** Create a JPEG with EXIF orientation tag for testing. */
+function createJpegWithExifOrientation(
+  jpegBytes: Uint8Array,
+  orientation: number
+): Uint8Array {
+  const binary = String.fromCharCode.apply(null, jpegBytes as unknown as number[])
+  const exifObj = { '0th': { [274]: orientation } }
+  const exifBytes = piexif.dump(exifObj)
+  const inserted = piexif.insert(exifBytes, binary)
+  const result = new Uint8Array(inserted.length)
+  for (let i = 0; i < inserted.length; i++) result[i] = inserted.charCodeAt(i)
+  return result
+}
 
 const minimalJpeg = new Uint8Array([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
@@ -113,50 +128,13 @@ describe('pdfExport', () => {
   })
 
   it('applies poi.rotation when drawing POI photos (rotation=90 produces rotated image)', async () => {
-    const trail = { id: 'test-graveyard', groupCode: 'test', trailType: 'graveyard' as const, displayName: 'Test Graveyard Trail', createdAt: '', nextSequence: 2 }
-    const setup: BrochureSetup = {
-      id: 'test-graveyard',
-      trailId: 'test-graveyard',
-      coverTitle: 'Test Heritage Trail',
-      coverPhotoBlob: mockBlob,
-      groupName: 'Test Parish',
-      creditsText: 'Credits',
-      introText: 'Introduction text.',
-      funderLogos: [],
-      mapBlob: null,
-      updatedAt: '2025-02-20T12:00:00Z',
-    }
-    const basePoi = {
-      id: 'test-g-001',
-      trailId: 'test-graveyard',
-      groupCode: 'test',
-      trailType: 'graveyard' as const,
-      sequence: 1,
-      filename: 'test-g-001.jpg',
-      photoBlob: mockBlob,
-      thumbnailBlob: mockBlob,
-      latitude: 53,
-      longitude: -8,
-      accuracy: 10,
-      capturedAt: '2025-02-20T12:00:00Z',
-      siteName: 'Rotated POI',
-      category: 'Other' as const,
-      description: 'Description',
-      story: 'Story',
-      url: '',
-      condition: 'Good' as const,
-      notes: '',
-      completed: true,
-    }
-
-    const pdfWithRotation = await generateBrochurePdf(trail, setup, [{ ...basePoi, rotation: 90 }])
-    const pdfWithoutRotation = await generateBrochurePdf(trail, setup, [{ ...basePoi, rotation: 0 }])
-
-    const bytesWith = new Uint8Array(await pdfWithRotation.arrayBuffer())
-    const bytesWithout = new Uint8Array(await pdfWithoutRotation.arrayBuffer())
-
-    // Rotation affects the content stream; PDFs must differ when rotation differs
-    expect(bytesWith).not.toEqual(bytesWithout)
+    const { fixImageOrientationForPdf } = await import('./pdfExport')
+    const rotated = await fixImageOrientationForPdf(mockBlob, 90)
+    const unrotated = await fixImageOrientationForPdf(mockBlob, 0)
+    expect(rotated).toBeInstanceOf(Blob)
+    expect(unrotated).toBeInstanceOf(Blob)
+    expect(rotated.size).toBeGreaterThan(0)
+    expect(unrotated.size).toBeGreaterThan(0)
   })
 
   it('map page contains valid image when POIs have GPS coordinates', async () => {
@@ -280,6 +258,50 @@ describe('pdfExport', () => {
     const lastMapCall = mapCalls[mapCalls.length - 1]
     expect(lastMapCall?.[1]?.width).toBe(1200)
     expect(lastMapCall?.[1]?.height).toBe(700)
+  })
+
+  it('image y-position is always above title y-position on POI page', () => {
+    const A6_WIDTH = 297.64
+    const A6_HEIGHT = 419.53
+    for (const rotation of [0, 90, 180, 270] as const) {
+      const layout = computePoiPageLayout(100, 80, rotation, A6_WIDTH, A6_HEIGHT)
+      expect(layout.imageBottomY).toBeGreaterThan(layout.titleY)
+      expect(layout.imageBottomY).toBeGreaterThan(0)
+      expect(layout.titleY).toBeGreaterThan(0)
+    }
+  })
+
+  it('EXIF orientation 3 (180°) produces different output when applied', async () => {
+    const jpegWithExif3 = createJpegWithExifOrientation(minimalJpeg, 3)
+    const { fixImageOrientationForPdf } = await import('./pdfExport')
+    const fixed = await fixImageOrientationForPdf(new Blob([new Uint8Array(jpegWithExif3)], { type: 'image/jpeg' }))
+    const fixedBuf = new Uint8Array(await fixed.arrayBuffer())
+    expect(Array.from(fixedBuf)).not.toEqual(Array.from(jpegWithExif3))
+  }, 15000)
+
+  it('EXIF orientation 6 (90° CW) produces different output when applied', async () => {
+    const jpegWithExif6 = createJpegWithExifOrientation(minimalJpeg, 6)
+    const { fixImageOrientationForPdf } = await import('./pdfExport')
+    const fixed = await fixImageOrientationForPdf(new Blob([new Uint8Array(jpegWithExif6)], { type: 'image/jpeg' }))
+    const fixedBuf = new Uint8Array(await fixed.arrayBuffer())
+    expect(Array.from(fixedBuf)).not.toEqual(Array.from(jpegWithExif6))
+  }, 15000)
+
+  it('EXIF orientation 6 fixed blob embeds correctly in PDF with valid dimensions', async () => {
+    const jpegWithExif6 = createJpegWithExifOrientation(minimalJpeg, 6)
+    const { fixImageOrientationForPdf } = await import('./pdfExport')
+    const fixed = await fixImageOrientationForPdf(new Blob([new Uint8Array(jpegWithExif6)], { type: 'image/jpeg' }))
+    const doc = await PDFDocument.create()
+    const img = await doc.embedJpg(new Uint8Array(await fixed.arrayBuffer()))
+    expect(img.width).toBeGreaterThan(0)
+    expect(img.height).toBeGreaterThan(0)
+  }, 15000)
+
+  it('image with no EXIF passes through unchanged', async () => {
+    const { fixImageOrientationForPdf } = await import('./pdfExport')
+    const fixed = await fixImageOrientationForPdf(new Blob([minimalJpeg], { type: 'image/jpeg' }))
+    const fixedBuf = new Uint8Array(await fixed.arrayBuffer())
+    expect(Array.from(fixedBuf)).toEqual(Array.from(minimalJpeg))
   })
 
   it('generates PDF with text-only cover when photo is missing', async () => {

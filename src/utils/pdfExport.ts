@@ -2,15 +2,160 @@ import {
   PDFDocument,
   StandardFonts,
   rgb,
-  degrees,
-  rotateRectangle,
   type PDFFont,
   type PDFImage,
   type PDFPage,
 } from 'pdf-lib'
 import type { Trail, POIRecord, BrochureSetup } from '../types'
-import { fixOrientation } from './thumbnail'
 import { fetchStaticMapForPdf } from './mapbox'
+
+/**
+ * Compute POI page layout coordinates. Image is always at top; title and text
+ * are positioned relative to the image bottom. Exported for testing.
+ */
+export function computePoiPageLayout(
+  imgWidth: number,
+  imgHeight: number,
+  _rotation: 0 | 90 | 180 | 270,
+  pageWidth: number,
+  pageHeight: number
+): { imageBottomY: number; titleY: number } {
+  const photoHeight = pageHeight * 0.4
+  const photoScale = Math.min(
+    pageWidth / imgWidth,
+    photoHeight / imgHeight
+  )
+  const photoH = Math.min(imgHeight * photoScale, photoHeight)
+  const imageBottomY = pageHeight - photoH
+  const titleY = imageBottomY - 25
+  return { imageBottomY, titleY }
+}
+
+/**
+ * Apply EXIF orientation (and optional user rotation) to an image before embedding in PDF.
+ * pdf-lib does not respect EXIF; this ensures correct orientation.
+ * Uses createImageBitmap (browser applies EXIF when decoding) + canvas for rotation.
+ * Falls back to Image when createImageBitmap is unavailable.
+ * Uses sharp only in Node (tests) where canvas/Image may not decode JPEGs.
+ */
+export async function fixImageOrientationForPdf(
+  blob: Blob,
+  userRotation?: 0 | 90 | 180 | 270
+): Promise<Blob> {
+  const needsRotation = userRotation === 90 || userRotation === 180 || userRotation === 270
+  const needsExifFix = await hasExifOrientation(blob)
+
+  if (!needsRotation && !needsExifFix) {
+    return blob
+  }
+
+  // Node (vitest): jsdom's Image/createImageBitmap don't decode JPEGs; use sharp for tests
+  const isNode = typeof process !== 'undefined' && process.versions?.node
+  if (isNode) {
+    try {
+      const sharp = (await import('sharp')).default
+      const buf = Buffer.from(await blob.arrayBuffer())
+      let pipeline = sharp(buf, { autoOrient: true })
+      if (needsRotation && userRotation) {
+        pipeline = pipeline.rotate(userRotation)
+      }
+      const out = await pipeline.jpeg({ quality: 92 }).toBuffer()
+      return new Blob([new Uint8Array(out)], { type: 'image/jpeg' })
+    } catch {
+      // Fall through to canvas path
+    }
+  }
+
+  // Browser: createImageBitmap/Image apply EXIF when decoding; then apply userRotation via canvas
+  return drawOrientedImageToCanvas(blob, userRotation ?? 0)
+}
+
+/**
+ * Decode image (EXIF applied by browser) and draw to canvas with userRotation.
+ * Uses createImageBitmap when available, else Image.
+ */
+async function drawOrientedImageToCanvas(
+  blob: Blob,
+  userRotation: 0 | 90 | 180 | 270
+): Promise<Blob> {
+  let width: number
+  let height: number
+  let drawable: ImageBitmap | HTMLImageElement
+
+  if (typeof createImageBitmap === 'function') {
+    const bitmap = await createImageBitmap(blob)
+    width = bitmap.width
+    height = bitmap.height
+    drawable = bitmap
+  } else {
+    const img = await loadImage(blob)
+    width = img.width
+    height = img.height
+    drawable = img
+  }
+
+  const canvas = document.createElement('canvas')
+  if (userRotation === 90 || userRotation === 270) {
+    canvas.width = height
+    canvas.height = width
+  } else {
+    canvas.width = width
+    canvas.height = height
+  }
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('No canvas context')
+
+  if (userRotation !== 0) {
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate((userRotation * Math.PI) / 180)
+    ctx.translate(-width / 2, -height / 2)
+  }
+  ctx.drawImage(drawable, 0, 0)
+
+  if ('close' in drawable && typeof drawable.close === 'function') {
+    ;(drawable as ImageBitmap).close()
+  }
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
+      'image/jpeg',
+      0.92
+    )
+  })
+}
+
+function loadImage(blob: Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(blob)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image'))
+    }
+    img.src = url
+  })
+}
+
+async function hasExifOrientation(blob: Blob): Promise<boolean> {
+  if (!blob.type.startsWith('image/jpeg')) return false
+  try {
+    const piexif = (await import('piexifjs')).default
+    const bytes = new Uint8Array(await blob.arrayBuffer())
+    const binary = String.fromCharCode.apply(null, bytes as unknown as number[])
+    if (!binary.startsWith('\xff\xd8')) return false
+    const exif = piexif.load(binary) as { '0th'?: { [k: number]: number } }
+    const orientation = exif['0th']?.[274]
+    return typeof orientation === 'number' && orientation !== 1
+  } catch {
+    return false
+  }
+}
 
 const A6_WIDTH = 297.64
 const A6_HEIGHT = 419.53
@@ -477,43 +622,31 @@ export async function generateBrochurePdf(
   for (let i = 0; i < validatedPois.length; i++) {
     const poi = validatedPois[i]
     const poiPage = doc.addPage([A6_WIDTH, A6_HEIGHT])
-    
-    // Hero photo at top (~40% of page height)
-    const orientedBlob = await fixOrientation(poi.thumbnailBlob)
-    console.log('[PDF] fixOrientation result:', { size: orientedBlob.size, type: orientedBlob.type })
+
+    const rotation = (poi.rotation ?? 0) as 0 | 90 | 180 | 270
+    const orientedBlob = await fixImageOrientationForPdf(poi.thumbnailBlob, rotation)
     const photoBytes = await blobToUint8Array(orientedBlob)
     const photoImg = isPng(orientedBlob)
       ? await doc.embedPng(photoBytes)
       : await doc.embedJpg(photoBytes)
-    
-    const rotation = (poi.rotation ?? 0) as 0 | 90 | 180 | 270
-    const effectiveW = rotation === 90 || rotation === 270 ? photoImg.height : photoImg.width
-    const effectiveH = rotation === 90 || rotation === 270 ? photoImg.width : photoImg.height
+
     const photoHeight = A6_HEIGHT * 0.4
     const photoScale = Math.min(
-      A6_WIDTH / effectiveW,
-      photoHeight / effectiveH
+      A6_WIDTH / photoImg.width,
+      photoHeight / photoImg.height
     )
-    const photoW = Math.min(effectiveW * photoScale, A6_WIDTH)
-    const photoH = Math.min(effectiveH * photoScale, photoHeight)
+    const photoW = Math.min(photoImg.width * photoScale, A6_WIDTH)
+    const photoH = Math.min(photoImg.height * photoScale, photoHeight)
     const photoX = (A6_WIDTH - photoW) / 2
     const photoY = A6_HEIGHT - photoH
 
-    const rect = rotateRectangle(
-      { x: photoX, y: photoY, width: photoW, height: photoH },
-      0,
-      rotation
-    )
-
     poiPage.drawImage(photoImg, {
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height,
-      ...(rotation !== 0 && { rotate: degrees(rotation) }),
+      x: photoX,
+      y: photoY,
+      width: photoW,
+      height: photoH,
     })
 
-    // Title section below photo
     const titleY = photoY - 25
     const headerText = `${poi.sequence}. ${(poi.siteName || poi.filename).toUpperCase()}`
     const titleSize = headerText.length > 40 ? 12 : 14
