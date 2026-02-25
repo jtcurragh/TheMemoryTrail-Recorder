@@ -266,17 +266,6 @@ function isPng(blob: Blob): boolean {
   return blob.type === 'image/png'
 }
 
-/** Detect PNG from magic bytes when blob.type is empty or generic (e.g. from URL fetch). */
-function isPngFromBytes(bytes: Uint8Array): boolean {
-  return (
-    bytes.length >= 8 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  )
-}
-
 function wrapText(
   font: PDFFont,
   text: string,
