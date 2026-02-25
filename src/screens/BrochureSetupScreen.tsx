@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+
+const BROCHURE_TRAIL_KEY = 'hgt_brochure_trail_id'
 import { getBrochureSetup, saveBrochureSetup } from '../db/brochureSetup'
 import { getUserProfile } from '../db/userProfile'
 import { getTrailById } from '../db/trails'
@@ -171,6 +173,7 @@ export function BrochureSetupScreen() {
       await saveBrochureSetup(setup)
       console.log('[BrochureSetup] Saved brochure setup with map blob')
       setSaved(true)
+      localStorage.setItem(BROCHURE_TRAIL_KEY, trailId)
       setTimeout(() => {
         setSaved(false)
         navigate('/export')

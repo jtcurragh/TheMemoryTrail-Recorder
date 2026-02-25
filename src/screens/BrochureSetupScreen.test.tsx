@@ -8,6 +8,12 @@ import { createTrail } from '../db/trails'
 import { saveBrochureSetup } from '../db/brochureSetup'
 import { BrochureSetupScreen } from './BrochureSetupScreen'
 
+const BROCHURE_TRAIL_KEY = 'hgt_brochure_trail_id'
+
+vi.mock('../utils/mapbox', () => ({
+  generateStaticMap: vi.fn(() => Promise.resolve(null)),
+}))
+
 function TestWrapper({ trailId }: { trailId?: string }) {
   return (
     <MemoryRouter
@@ -25,6 +31,7 @@ describe('BrochureSetupScreen', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    localStorage.clear()
     await db.delete()
     await db.open()
   })
@@ -129,6 +136,35 @@ describe('BrochureSetupScreen', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/cover title is required/i)).toBeInTheDocument()
+    })
+  })
+
+  it('writes brochure trail id to localStorage when Save Brochure Setup is tapped', async () => {
+    await createUserProfile({ email: 'sheila@example.com', name: 'Sheila', groupName: 'Ardmore', groupCode: 'ardmore' })
+    await createTrail({
+      groupCode: 'ardmore',
+      trailType: 'parish',
+      displayName: 'Ardmore Parish Trail',
+    })
+    const parishTrailId = 'ardmore-parish'
+
+    render(<TestWrapper trailId={parishTrailId} />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /brochure setup/i })).toBeInTheDocument()
+    })
+
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/cover title/i), 'Ardmore Heritage Trail')
+    await user.type(screen.getByLabelText(/community group name/i), 'Ardmore Tidy Towns')
+    await user.type(screen.getByLabelText(/introduction/i), 'Welcome to our heritage trail.')
+
+    expect(localStorage.getItem(BROCHURE_TRAIL_KEY)).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /save brochure setup/i }))
+
+    await waitFor(() => {
+      expect(localStorage.getItem(BROCHURE_TRAIL_KEY)).toBe(parishTrailId)
     })
   })
 })
