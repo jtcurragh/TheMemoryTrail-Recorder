@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
-import type { Trail, POIRecord } from '../types'
+import type { Trail, POIRecord, UserProfile } from '../types'
 import { getPOIsByTrailId } from '../db/pois'
+import { deriveGroupCode } from './groupCode'
 
 function escapeCsvValue(value: string): string {
   if (value.includes('"') || value.includes(',') || value.includes('\n')) {
@@ -119,6 +120,7 @@ export async function exportTrailsToZip(trails: Trail[]): Promise<Blob> {
     const sortedPois = [...pois].sort((a, b) => a.sequence - b.sequence)
     const trailLabel = trail.displayName
     const suffix = trail.trailType === 'graveyard' ? 'graveyard' : 'parish'
+    const prefix = `${suffix}/`
 
     const trailManifest = {
       schemaVersion: '1.0',
@@ -131,28 +133,43 @@ export async function exportTrailsToZip(trails: Trail[]): Promise<Blob> {
       lastModifiedAt: new Date().toISOString(),
       poiCount: sortedPois.length,
     }
-    zip.file(`trail_${suffix}.json`, JSON.stringify(trailManifest, null, 2))
+    zip.file(`${prefix}trail_${suffix}.json`, JSON.stringify(trailManifest, null, 2))
 
     for (const poi of sortedPois) {
-      zip.file(poi.filename, poi.photoBlob)
+      zip.file(`${prefix}${poi.filename}`, poi.photoBlob)
     }
 
     const csvRows = [csvHeader(), ...sortedPois.map(poiToCsvRow)]
-    zip.file(`${groupCode}_${suffix}.csv`, csvRows.join('\n'))
+    zip.file(`${prefix}${groupCode}_${suffix}.csv`, csvRows.join('\n'))
 
     const storiesTemplate = buildStoriesTemplate(sortedPois, trailLabel)
-    zip.file(`${groupCode}_${suffix}_stories.txt`, storiesTemplate)
+    zip.file(`${prefix}${groupCode}_${suffix}_stories.txt`, storiesTemplate)
 
     const hasAnyGps = sortedPois.some(
       (p) => p.latitude != null && p.longitude != null
     )
     if (hasAnyGps) {
       const kml = buildKml(sortedPois, trailLabel)
-      zip.file(`${groupCode}_${suffix}.kml`, kml)
+      zip.file(`${prefix}${groupCode}_${suffix}.kml`, kml)
     }
   }
 
   return zip.generateAsync({ type: 'blob' })
+}
+
+/**
+ * Derives the ZIP export filename from the graveyard trail's displayName.
+ * Strips " Graveyard Trail" suffix and sanitises via deriveGroupCode.
+ */
+export function getExportZipFilename(
+  profile: UserProfile,
+  trails: Trail[]
+): string {
+  const graveyard = trails.find((t) => t.trailType === 'graveyard')
+  const baseName = graveyard?.displayName?.replace(/\s+Graveyard Trail$/i, '') ?? ''
+  const placeSlug = baseName ? deriveGroupCode(baseName) : ''
+  const slug = placeSlug || profile.groupCode
+  return `${slug}_historic_graves_trail_export.zip`
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {
