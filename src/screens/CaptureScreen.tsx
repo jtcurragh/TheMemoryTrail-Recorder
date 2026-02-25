@@ -10,6 +10,7 @@ import { incrementTrailSequence } from '../db/trails'
 import { generatePOIId, generateFilename } from '../utils/idGeneration'
 import { generateThumbnail } from '../utils/thumbnail'
 import { embedGpsInJpeg, extractGpsFromJpeg } from '../utils/exif'
+import { CameraGuideOverlay } from '../components/CameraGuideOverlay'
 import type { Trail } from '../types'
 
 const MAX_POIS = 12
@@ -237,10 +238,7 @@ export function CaptureScreen() {
           />
           {isReady && (
             <>
-              <div
-                className="absolute inset-[8%] border-2 border-dashed border-white/50 rounded pointer-events-none"
-                aria-hidden
-              />
+              <CameraGuideOverlay />
               <button
                 type="button"
                 onClick={handleCapture}
