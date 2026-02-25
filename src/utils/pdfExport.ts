@@ -613,18 +613,23 @@ export async function generateBrochurePdf(
     color: WHITE,
   })
 
-  // Fetch map from Mapbox Static Images API at export time (reliable for PWA)
-  const mapBlob = await fetchStaticMapForPdf(pois)
+  // Map area: full page width, at least half page height
+  const mapAreaWidth = A6_WIDTH - 40
+  const mapAreaHeight = A6_HEIGHT - mapHeaderH - 40
+  const minMapHeight = A6_HEIGHT / 2
+  const mapWidthPx = 1280
+  const mapHeightPx = Math.max(640, Math.ceil(mapWidthPx * (minMapHeight / mapAreaWidth)))
+
+  const mapBlob = await fetchStaticMapForPdf(pois, {
+    width: mapWidthPx,
+    height: mapHeightPx,
+  })
   if (mapBlob) {
     try {
       const mapImg = await embedImage(doc, mapBlob)
-      const mapAreaHeight = A6_HEIGHT - mapHeaderH - 40
-      const mapScale = Math.min(
-        (A6_WIDTH - 40) / mapImg.width,
-        mapAreaHeight / mapImg.height
-      )
+      const mapScale = mapAreaWidth / mapImg.width
       const mapW = mapImg.width * mapScale
-      const mapH = mapImg.height * mapScale
+      const mapH = Math.min(mapImg.height * mapScale, mapAreaHeight)
       const mapX = (A6_WIDTH - mapW) / 2
       const mapY = A6_HEIGHT - mapHeaderH - 20 - mapH
 

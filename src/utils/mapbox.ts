@@ -85,12 +85,21 @@ export async function generateStaticMap(pois: POIRecord[]): Promise<Blob | null>
   }
 }
 
+/** Options for PDF map image dimensions */
+export interface FetchStaticMapForPdfOptions {
+  width?: number
+  height?: number
+}
+
 /**
  * Fetch a static map image for PDF brochure using Mapbox Static Images API.
- * Uses trail centre (average of POI coordinates), zoom 14, 800x400, with markers.
+ * Uses bbox from POI bounds with padding, numbered pin-s markers, fills page.
  * Called at PDF export time for reliable map rendering in PWA context.
  */
-export async function fetchStaticMapForPdf(pois: POIRecord[]): Promise<Blob | null> {
+export async function fetchStaticMapForPdf(
+  pois: POIRecord[],
+  options?: FetchStaticMapForPdfOptions
+): Promise<Blob | null> {
   if (!MAPBOX_TOKEN) return null
 
   const validPois = pois.filter(
@@ -100,21 +109,31 @@ export async function fetchStaticMapForPdf(pois: POIRecord[]): Promise<Blob | nu
 
   const lats = validPois.map((p) => p.latitude!)
   const lons = validPois.map((p) => p.longitude!)
-  const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
-  const centerLon = lons.reduce((a, b) => a + b, 0) / lons.length
+  let minLat = Math.min(...lats)
+  let maxLat = Math.max(...lats)
+  let minLon = Math.min(...lons)
+  let maxLon = Math.max(...lons)
+
+  // Expand degenerate bbox (single point) so Mapbox has a valid view
+  const latSpan = Math.max(maxLat - minLat, 0.002)
+  const lonSpan = Math.max(maxLon - minLon, 0.002)
+  minLat -= latSpan * 0.1
+  maxLat += latSpan * 0.1
+  minLon -= lonSpan * 0.1
+  maxLon += lonSpan * 0.1
 
   const markers = validPois
     .sort((a, b) => a.sequence - b.sequence)
     .map((p) => `pin-s-${p.sequence}+3a9b8e(${p.longitude},${p.latitude})`)
     .join(',')
 
-  const width = 800
-  const height = 400
-  const zoom = 14
+  const width = options?.width ?? 1280
+  const height = options?.height ?? 640
   const style = 'mapbox/outdoors-v12'
 
-  const overlay = markers
-  const url = `https://api.mapbox.com/styles/v1/${style}/static/${overlay}/${centerLon},${centerLat},${zoom}/${width}x${height}?access_token=${MAPBOX_TOKEN}`
+  // bbox: [minLon, minLat, maxLon, maxLat]; padding in pixels
+  const bbox = `[${minLon},${minLat},${maxLon},${maxLat}]`
+  const url = `https://api.mapbox.com/styles/v1/${style}/static/${markers}/${bbox}/${width}x${height}?padding=40&access_token=${MAPBOX_TOKEN}`
 
   try {
     const response = await fetch(url)

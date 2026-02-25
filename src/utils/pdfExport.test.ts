@@ -203,7 +203,22 @@ describe('pdfExport', () => {
     expect(pdf).toBeInstanceOf(Blob)
     expect(pdf.size).toBeGreaterThan(100)
 
-    expect(vi.mocked(fetchStaticMapForPdf)).toHaveBeenCalledWith(poisWithGps)
+    const mapCalls = vi.mocked(fetchStaticMapForPdf).mock.calls.filter(
+      (c) => c[0].length === 1 && c[0][0].trailId === 'test'
+    )
+    expect(mapCalls.length).toBeGreaterThanOrEqual(1)
+    const call = mapCalls[mapCalls.length - 1]!
+    expect(call[0][0].latitude).toBe(53.27)
+    expect(call[0][0].longitude).toBe(-8.5)
+    const opts = call[1] as { width: number; height: number } | undefined
+    expect(opts).toBeDefined()
+    expect(opts).toEqual(
+      expect.objectContaining({
+        width: expect.any(Number),
+        height: expect.any(Number),
+      })
+    )
+    expect(opts?.height ?? 0).toBeGreaterThanOrEqual((opts?.width ?? 1) / 2)
 
     const pdfBytes = new Uint8Array(await pdf.arrayBuffer())
     const pdfText = new TextDecoder().decode(pdfBytes)
