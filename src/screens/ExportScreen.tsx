@@ -5,13 +5,13 @@ import { getTrailsByGroupCode } from '../db/trails'
 import { getPOIsByTrailId } from '../db/pois'
 import { getBrochureSetup } from '../db/brochureSetup'
 import { db } from '../db/database'
-import { exportTrailsToZip, downloadBlob } from '../utils/export'
+import { exportTrailsToZip, downloadBlob, getExportZipFilename } from '../utils/export'
 import { generateBrochurePdf } from '../utils/pdfExport'
 import { generateDemoBrochureSetup, generateDemoPOIs, generateDemoTrail } from '../utils/demoData'
 import { ImportButton } from '../components/ImportButton'
 import { ImportResultModal } from '../components/ImportResultModal'
 import { useImport } from '../hooks/useImport'
-import { deriveGroupCode, slugifyForFilename } from '../utils/groupCode'
+import { slugifyForFilename } from '../utils/groupCode'
 import type { UserProfile, Trail } from '../types'
 
 const BROCHURE_TRAIL_KEY = 'hgt_brochure_trail_id'
@@ -172,8 +172,7 @@ export function ExportScreen() {
 
       const trails = await getTrailsByGroupCode(profile.groupCode)
       const zip = await exportTrailsToZip(trails)
-      const parishSlug = deriveGroupCode(profile.groupName) || profile.groupCode
-      const filename = `${parishSlug}_historic_graves_trail_export.zip`
+      const filename = getExportZipFilename(profile, trails)
       downloadBlob(zip, filename)
       setExportSuccess(true)
       setTimeout(() => setExportSuccess(false), 3000)
