@@ -31,7 +31,7 @@ describe('ExportScreen', () => {
       groupName: 'Test Parish',
       groupCode: 'test',
     })
-    const graveyard = await createTrail({
+    await createTrail({
       groupCode: 'test',
       trailType: 'graveyard',
       displayName: 'Test Graveyard Trail',
