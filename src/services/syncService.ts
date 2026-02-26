@@ -266,7 +266,12 @@ export async function runSync(): Promise<SyncResult> {
     } catch (err) {
       const attempts = item.attempts + 1
       await db.syncQueue.update(item.id, { attempts })
-      lastError = err instanceof Error ? err.message : String(err)
+      lastError =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : String(err)
       if (attempts >= MAX_ATTEMPTS) {
         await db.syncQueue.update(item.id, {
           syncedAt: new Date().toISOString(),
