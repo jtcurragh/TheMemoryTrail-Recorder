@@ -400,13 +400,12 @@ export async function generateBrochurePdf(
       color: TEAL,
     })
 
-    // App logo (left of header)
-    const headerCenterY = imageZoneTop + HEADER_HEIGHT / 2
-    const logoY = headerCenterY - LOGO_SIZE / 2
+    // App logo (top left corner)
+    const LOGO_MARGIN = 15
     if (logoImg) {
       page1.drawImage(logoImg, {
-        x: 20,
-        y: logoY,
+        x: LOGO_MARGIN,
+        y: A6_HEIGHT - LOGO_MARGIN - LOGO_SIZE,
         width: LOGO_SIZE,
         height: LOGO_SIZE,
       })
@@ -414,7 +413,7 @@ export async function generateBrochurePdf(
 
     // Supertitle "Historic Graves Trail": 14pt, white, letter-spacing
     const supertitleY = A6_HEIGHT - HEADER_PADDING - SUPER_TITLE_SIZE
-    const supertitleX = logoImg ? 20 + LOGO_SIZE + 8 : 20
+    const supertitleX = 20
     drawTextWithLetterSpacing(
       page1,
       'The Historic Graves Trail',
@@ -436,11 +435,12 @@ export async function generateBrochurePdf(
       color: TEAL,
     })
 
-    // App logo centered at top
+    // App logo (top left corner)
+    const LOGO_MARGIN = 15
     if (logoImg) {
       page1.drawImage(logoImg, {
-        x: (A6_WIDTH - LOGO_SIZE) / 2,
-        y: A6_HEIGHT - 60 - LOGO_SIZE,
+        x: LOGO_MARGIN,
+        y: A6_HEIGHT - LOGO_MARGIN - LOGO_SIZE,
         width: LOGO_SIZE,
         height: LOGO_SIZE,
       })
