@@ -80,12 +80,19 @@ export interface SyncedStats {
 }
 
 /**
- * Derive trailId from POI id (format: groupCode-g|p-nnn -> groupCode-graveyard|parish)
+ * Derive trailId from POI id.
+ * Supports legacy format (groupCode-g|p-nnn) and new format (groupCode-g|p-DDMMYY-HHmmss-SSS).
  */
 function trailIdFromPoiId(poiId: string): string {
-  const match = poiId.match(/^(.+)-(g|p)-\d+$/)
-  if (!match) return poiId
-  const [, groupCode, suffix] = match
+  const legacyMatch = poiId.match(/^(.+)-(g|p)-\d{3}$/)
+  if (legacyMatch) {
+    const [, groupCode, suffix] = legacyMatch
+    const trailType = suffix === 'g' ? 'graveyard' : 'parish'
+    return `${groupCode}-${trailType}`
+  }
+  const newMatch = poiId.match(/^(.+)-(g|p)-\d{6}-\d{6}-\d{3}$/)
+  if (!newMatch) return poiId
+  const [, groupCode, suffix] = newMatch
   const trailType = suffix === 'g' ? 'graveyard' : 'parish'
   return `${groupCode}-${trailType}`
 }

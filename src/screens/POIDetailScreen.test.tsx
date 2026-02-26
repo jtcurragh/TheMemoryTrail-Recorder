@@ -31,7 +31,6 @@ async function setupPoiWithRotation(rotation: 0 | 90 | 180 | 270) {
     groupCode: 'ardmore',
     trailType: 'graveyard',
     sequence: 1,
-    filename: 'ardmore-g-001.jpg',
     photoBlob: mockBlob,
     thumbnailBlob: mockBlob,
     latitude: null,
@@ -52,8 +51,8 @@ describe('POIDetailScreen photo rotation', () => {
   })
 
   it('rotate button renders on the POI photo viewer', async () => {
-    await setupPoiWithRotation(0)
-    render(<TestWrapper />)
+    const poi = await setupPoiWithRotation(0)
+    render(<TestWrapper initialEntry={`/trail/poi/${poi.id}`} />)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /rotate photo clockwise/i })).toBeInTheDocument()
@@ -62,8 +61,8 @@ describe('POIDetailScreen photo rotation', () => {
 
   it('each tap increments rotation by 90° (0 → 90 → 180 → 270 → 0)', async () => {
     const user = userEvent.setup()
-    await setupPoiWithRotation(0)
-    render(<TestWrapper />)
+    const poi = await setupPoiWithRotation(0)
+    render(<TestWrapper initialEntry={`/trail/poi/${poi.id}`} />)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /rotate photo clockwise/i })).toBeInTheDocument()
@@ -98,8 +97,8 @@ describe('POIDetailScreen photo rotation', () => {
 
   it('rotation value is saved to Dexie on change', async () => {
     const user = userEvent.setup()
-    await setupPoiWithRotation(0)
-    render(<TestWrapper />)
+    const poi = await setupPoiWithRotation(0)
+    render(<TestWrapper initialEntry={`/trail/poi/${poi.id}`} />)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /rotate photo clockwise/i })).toBeInTheDocument()
@@ -110,14 +109,14 @@ describe('POIDetailScreen photo rotation', () => {
     await user.click(rotateBtn)
 
     await waitFor(async () => {
-      const retrieved = await getPOIById('ardmore-g-001', { includeBlobs: false })
+      const retrieved = await getPOIById(poi.id, { includeBlobs: false })
       expect(retrieved?.rotation).toBe(180)
     })
   })
 
   it('photo displays with correct CSS transform matching stored rotation', async () => {
-    await setupPoiWithRotation(180)
-    render(<TestWrapper />)
+    const poi = await setupPoiWithRotation(180)
+    render(<TestWrapper initialEntry={`/trail/poi/${poi.id}`} />)
 
     await waitFor(() => {
       const img = document.querySelector('img[alt]')
@@ -127,8 +126,8 @@ describe('POIDetailScreen photo rotation', () => {
 
   it('rotation persists after navigating away and returning to POI detail', async () => {
     const user = userEvent.setup()
-    await setupPoiWithRotation(0)
-    const { unmount } = render(<TestWrapper />)
+    const poi = await setupPoiWithRotation(0)
+    const { unmount } = render(<TestWrapper initialEntry={`/trail/poi/${poi.id}`} />)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /rotate photo clockwise/i })).toBeInTheDocument()
@@ -139,12 +138,12 @@ describe('POIDetailScreen photo rotation', () => {
     await user.click(rotateBtn)
 
     await waitFor(async () => {
-      const retrieved = await getPOIById('ardmore-g-001', { includeBlobs: false })
+      const retrieved = await getPOIById(poi.id, { includeBlobs: false })
       expect(retrieved?.rotation).toBe(180)
     })
 
     unmount()
-    render(<TestWrapper />)
+    render(<TestWrapper initialEntry={`/trail/poi/${poi.id}`} />)
 
     await waitFor(() => {
       const img = document.querySelector('img[alt]')

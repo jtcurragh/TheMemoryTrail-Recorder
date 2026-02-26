@@ -87,7 +87,8 @@ export interface CreatePOIInput {
   groupCode: string
   trailType: TrailType
   sequence: number
-  filename: string
+  /** @deprecated Filename is generated from POI ID — ignored if provided */
+  filename?: string
   photoBlob: Blob
   thumbnailBlob: Blob
   latitude: number | null

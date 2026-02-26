@@ -7,7 +7,7 @@ import { getTrailById } from '../db/trails'
 import { getPOIsByTrailId } from '../db/pois'
 import { createPOI } from '../db/pois'
 import { incrementTrailSequence } from '../db/trails'
-import { generatePOIId, generateFilename } from '../utils/idGeneration'
+import { generatePOIId } from '../utils/idGeneration'
 import { generateThumbnail } from '../utils/thumbnail'
 import { embedGpsInJpeg, extractGpsFromJpeg } from '../utils/exif'
 import { CameraGuideOverlay } from '../components/CameraGuideOverlay'
@@ -34,7 +34,7 @@ export function CaptureScreen() {
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<{ prefix: string; filename: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   const [gpsSource, setGpsSource] = useState<'device' | 'exif' | 'none'>('none')
@@ -149,15 +149,12 @@ export function CaptureScreen() {
       }
       await new Promise((r) => requestAnimationFrame(r))
       const sequence = trail.nextSequence
-      const poiId = generatePOIId(trail.groupCode, trail.trailType, sequence)
-      const filename = generateFilename(poiId)
 
-      await createPOI({
+      const poi = await createPOI({
         trailId: trail.id,
         groupCode: trail.groupCode,
         trailType: trail.trailType,
         sequence,
-        filename,
         photoBlob,
         thumbnailBlob,
         latitude: finalLat,
@@ -167,7 +164,7 @@ export function CaptureScreen() {
       })
       await incrementTrailSequence(trail.id)
 
-      setSuccessMessage(`Saved — ${filename}`)
+      setSuccessMessage({ prefix: 'Saved — ', filename: poi.filename })
       setPoiCount((c) => c + 1)
       if (previewUrl) URL.revokeObjectURL(previewUrl)
       setCapturedBlob(null)
@@ -208,7 +205,7 @@ export function CaptureScreen() {
   }
 
   const isFull = poiCount >= MAX_POIS
-  const nextId = generatePOIId(trail.groupCode, trail.trailType, trail.nextSequence)
+  const nextId = generatePOIId(trail.groupCode, trail.trailType)
 
   if (isFull) {
     return (
@@ -276,7 +273,7 @@ export function CaptureScreen() {
             <span className="w-14 shrink-0" aria-hidden />
           </div>
           <div className="flex justify-between items-center mt-1 text-white/90 text-sm">
-            <span>NEXT {nextId}</span>
+            <span>NEXT <span className="text-xs text-[#9ca3af] font-normal">{nextId}</span></span>
             <span className="px-2 py-0.5 bg-white/20 rounded text-xs">
               {poiCount} of {MAX_POIS}
             </span>
@@ -310,7 +307,8 @@ export function CaptureScreen() {
             role="status"
             aria-live="polite"
           >
-            {successMessage}
+            {successMessage.prefix}
+            <span className="text-xs text-[#9ca3af] font-normal">{successMessage.filename}</span>
           </div>
         )}
         <div className="flex-1 min-h-0 flex flex-col bg-black">
@@ -363,7 +361,8 @@ export function CaptureScreen() {
             role="status"
             aria-live="polite"
           >
-            {successMessage}
+            {successMessage.prefix}
+            <span className="text-xs text-[#9ca3af] font-normal">{successMessage.filename}</span>
           </div>
         )}
 
@@ -379,7 +378,7 @@ export function CaptureScreen() {
 
         <div className="px-5 py-5 bg-white shrink-0 rounded-t-xl shadow-[0_-2px_8px_rgba(0,0,0,0.08)] border-t border-[#e0e0e0]">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xl font-semibold text-[#1a2a2a]">NEXT {nextId}</p>
+            <p className="text-xl font-semibold text-[#1a2a2a]">NEXT <span className="text-xs text-[#9ca3af] font-normal">{nextId}</span></p>
             <span className="bg-[#e0e0e0] text-[#0b0c0c] text-sm font-semibold px-3 py-1 rounded-full">
               {poiCount} of {MAX_POIS} recorded
             </span>

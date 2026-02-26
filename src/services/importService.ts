@@ -2,7 +2,7 @@ import JSZip from 'jszip'
 import type { Trail, POIRecord, TrailType, POICategory, POICondition } from '../types'
 import { db } from '../db/database'
 import { getTrailById } from '../db/trails'
-import { generatePOIId } from '../utils/idGeneration'
+import { generatePOIId, generateFilename } from '../utils/idGeneration'
 
 export interface TrailManifest {
   schemaVersion: string
@@ -325,7 +325,8 @@ async function importTrail(
     }
 
     try {
-      const id = generatePOIId(poiData.groupCode, poiData.trailType, poiData.sequence)
+      const id = generatePOIId(poiData.groupCode, poiData.trailType)
+      const filename = generateFilename(id)
 
       const poiRecord: POIRecord = {
         id,
@@ -333,7 +334,7 @@ async function importTrail(
         groupCode: poiData.groupCode,
         trailType: poiData.trailType,
         sequence: poiData.sequence,
-        filename: poiData.filename,
+        filename,
         photoBlob: poiData.photoBlob,
         thumbnailBlob: poiData.thumbnailBlob || poiData.photoBlob,
         latitude: poiData.latitude,
@@ -367,8 +368,9 @@ async function importTrail(
 
       await db.pois.put(recordForDb as unknown as POIRecord)
       poisImported++
+      await new Promise((r) => setTimeout(r, 1100))
     } catch (error) {
-      console.error('Failed to import POI:', poiData.filename, error)
+      console.error('Failed to import POI:', poiData.siteName || poiData.filename, error)
       poisSkipped++
     }
   }

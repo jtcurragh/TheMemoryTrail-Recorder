@@ -210,9 +210,20 @@ export function TrailScreen() {
                           {statusIcon}
                         </span>
                       </div>
-                      <span className="font-bold text-[#0b0c0c] truncate block">
+                      <span
+                        className={`truncate block ${
+                          poi.siteName
+                            ? 'font-bold text-[#0b0c0c]'
+                            : 'text-xs text-[#9ca3af] font-normal'
+                        }`}
+                      >
                         {poi.siteName || poi.filename}
                       </span>
+                      {poi.siteName && (
+                        <span className="block text-xs text-[#9ca3af] font-normal truncate">
+                          {poi.filename}
+                        </span>
+                      )}
                     </div>
                   </Link>
                   <div className="flex shrink-0 gap-1" role="toolbar" aria-label="POI actions">
@@ -291,7 +302,7 @@ export function TrailScreen() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="delete-dialog-title" className="text-xl font-semibold text-[#1a2a2a] mb-2">
-              Delete {deletePoiId}?
+              Delete <span className="text-xs text-[#9ca3af] font-normal">{deletePoiId}</span>?
             </h2>
             <p id="delete-dialog-desc" className="text-[#0b0c0c] mb-6">
               This cannot be undone.

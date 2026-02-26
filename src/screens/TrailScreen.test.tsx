@@ -20,18 +20,17 @@ function TestWrapper() {
   )
 }
 
-async function setupTrailWithPois() {
+async function setupTrailWithPois(): Promise<{ poi1: Awaited<ReturnType<typeof createPOI>>; poi2: Awaited<ReturnType<typeof createPOI>> }> {
   await createTrail({
     groupCode: 'ardmore',
     trailType: 'graveyard',
     displayName: 'Ardmore Graveyard Trail',
   })
-  await createPOI({
+  const poi1 = await createPOI({
     trailId: 'ardmore-graveyard',
     groupCode: 'ardmore',
     trailType: 'graveyard',
     sequence: 1,
-    filename: 'ardmore-g-001.jpg',
     photoBlob: mockBlob,
     thumbnailBlob: mockBlob,
     latitude: null,
@@ -39,12 +38,12 @@ async function setupTrailWithPois() {
     accuracy: null,
     capturedAt: '2025-02-20T12:00:00Z',
   })
-  await createPOI({
+  await new Promise((r) => setTimeout(r, 5))
+  const poi2 = await createPOI({
     trailId: 'ardmore-graveyard',
     groupCode: 'ardmore',
     trailType: 'graveyard',
     sequence: 2,
-    filename: 'ardmore-g-002.jpg',
     photoBlob: mockBlob,
     thumbnailBlob: mockBlob,
     latitude: null,
@@ -52,6 +51,7 @@ async function setupTrailWithPois() {
     accuracy: null,
     capturedAt: '2025-02-20T12:00:00Z',
   })
+  return { poi1, poi2 }
 }
 
 describe('TrailScreen POI delete', () => {
@@ -76,7 +76,7 @@ describe('TrailScreen POI delete', () => {
   })
 
   it('tapping delete opens confirmation dialog with correct POI ID', async () => {
-    await setupTrailWithPois()
+    const { poi1 } = await setupTrailWithPois()
     render(<TestWrapper />)
 
     await waitFor(() => {
@@ -87,13 +87,13 @@ describe('TrailScreen POI delete', () => {
     await userEvent.click(deleteButtons[0])
 
     await waitFor(() => {
-      expect(screen.getByText(/Delete ardmore-g-001\?/i)).toBeInTheDocument()
+      expect(screen.getByText(new RegExp(`Delete ${poi1.id}\\?`, 'i'))).toBeInTheDocument()
       expect(screen.getByText(/This cannot be undone/i)).toBeInTheDocument()
     })
   })
 
   it('confirming deletes the POI from Dexie and removes it from the list', async () => {
-    await setupTrailWithPois()
+    const { poi1, poi2 } = await setupTrailWithPois()
     render(<TestWrapper />)
 
     await waitFor(() => {
@@ -104,7 +104,7 @@ describe('TrailScreen POI delete', () => {
     await userEvent.click(deleteButtons[0])
 
     await waitFor(() => {
-      expect(screen.getByText(/Delete ardmore-g-001\?/i)).toBeInTheDocument()
+      expect(screen.getByText(new RegExp(`Delete ${poi1.id}\\?`, 'i'))).toBeInTheDocument()
     })
 
     const confirmButton = screen.getByRole('button', { name: /^Delete$/i })
@@ -113,16 +113,16 @@ describe('TrailScreen POI delete', () => {
     await waitFor(async () => {
       const pois = await getPOIsByTrailId('ardmore-graveyard', { includeBlobs: false })
       expect(pois).toHaveLength(1)
-      expect(pois[0].id).toBe('ardmore-g-002')
+      expect(pois[0].id).toBe(poi2.id)
     })
 
     await waitFor(() => {
-      expect(screen.queryByText(/ardmore-g-001/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(new RegExp(poi1.id, 'i'))).not.toBeInTheDocument()
     })
   })
 
   it('cancelling dismisses the dialog without deleting', async () => {
-    await setupTrailWithPois()
+    const { poi1 } = await setupTrailWithPois()
     render(<TestWrapper />)
 
     await waitFor(() => {
@@ -133,14 +133,14 @@ describe('TrailScreen POI delete', () => {
     await userEvent.click(deleteButtons[0])
 
     await waitFor(() => {
-      expect(screen.getByText(/Delete ardmore-g-001\?/i)).toBeInTheDocument()
+      expect(screen.getByText(new RegExp(`Delete ${poi1.id}\\?`, 'i'))).toBeInTheDocument()
     })
 
     const cancelButton = screen.getByRole('button', { name: /cancel/i })
     await userEvent.click(cancelButton)
 
     await waitFor(() => {
-      expect(screen.queryByText(/Delete ardmore-g-001\?/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(new RegExp(`Delete ${poi1.id}\\?`, 'i'))).not.toBeInTheDocument()
     })
 
     const pois = await getPOIsByTrailId('ardmore-graveyard', { includeBlobs: false })
@@ -148,7 +148,7 @@ describe('TrailScreen POI delete', () => {
   })
 
   it('deleted POI sequence number is not reused', async () => {
-    await setupTrailWithPois()
+    const { poi1, poi2 } = await setupTrailWithPois()
     render(<TestWrapper />)
 
     await waitFor(() => {
@@ -159,7 +159,7 @@ describe('TrailScreen POI delete', () => {
     await userEvent.click(deleteButtons[0])
 
     await waitFor(() => {
-      expect(screen.getByText(/Delete ardmore-g-001\?/i)).toBeInTheDocument()
+      expect(screen.getByText(new RegExp(`Delete ${poi1.id}\\?`, 'i'))).toBeInTheDocument()
     })
 
     const confirmButton = screen.getByRole('button', { name: /^Delete$/i })
@@ -170,10 +170,10 @@ describe('TrailScreen POI delete', () => {
       expect(pois).toHaveLength(1)
     })
 
-    // Remaining POI should keep sequence 2, not be renumbered to 1
+    // Remaining POI is renumbered to close the gap (deletePOI renumbers 1,2,3...)
     const remaining = await getPOIsByTrailId('ardmore-graveyard', { includeBlobs: false })
-    expect(remaining[0].sequence).toBe(2)
-    expect(remaining[0].id).toBe('ardmore-g-002')
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].id).toBe(poi2.id)
   })
 })
 
@@ -187,8 +187,8 @@ describe('TrailScreen thumbnail rotation', () => {
   })
 
   it('thumbnail displays with rotation transform when POI has rotation', async () => {
-    await setupTrailWithPois()
-    await updatePOI('ardmore-g-001', { rotation: 90 })
+    const { poi1 } = await setupTrailWithPois()
+    await updatePOI(poi1.id, { rotation: 90 })
 
     render(<TestWrapper />)
 
@@ -197,7 +197,7 @@ describe('TrailScreen thumbnail rotation', () => {
     })
 
     await waitFor(() => {
-      const thumbnails = document.querySelectorAll('img[alt*="ardmore-g-001"]')
+      const thumbnails = document.querySelectorAll(`img[alt*="${poi1.id}"]`)
       expect(thumbnails.length).toBeGreaterThanOrEqual(1)
       expect(thumbnails[0]).toHaveStyle({ transform: 'rotate(90deg)' })
     })

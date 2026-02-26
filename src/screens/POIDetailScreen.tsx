@@ -257,7 +257,8 @@ export function POIDetailScreen() {
 
       <div className="mt-4 space-y-1 text-[#595959] text-sm">
         <p>
-          <span className="font-bold">File:</span> {poi.filename}
+          <span className="font-bold">File:</span>{' '}
+          <span className="text-xs text-[#9ca3af] font-normal">{poi.filename}</span>
         </p>
         {hasGps && (
           <p>

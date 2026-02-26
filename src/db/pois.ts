@@ -7,7 +7,7 @@ import type {
 } from '../types'
 import { db } from './database'
 import { enqueueSync } from './syncQueue'
-import { generatePOIId } from '../utils/idGeneration'
+import { generatePOIId, generateFilename } from '../utils/idGeneration'
 import { features } from '../config/features'
 import { supabase } from '../lib/supabase'
 
@@ -69,11 +69,8 @@ export async function getPOIsByTrailId(
 }
 
 export async function createPOI(input: CreatePOIInput): Promise<POIRecord> {
-  const id = generatePOIId(
-    input.groupCode,
-    input.trailType,
-    input.sequence
-  )
+  const id = generatePOIId(input.groupCode, input.trailType)
+  const filename = generateFilename(id)
 
   const poi: POIRecord = {
     id,
@@ -81,7 +78,7 @@ export async function createPOI(input: CreatePOIInput): Promise<POIRecord> {
     groupCode: input.groupCode,
     trailType: input.trailType,
     sequence: input.sequence,
-    filename: input.filename,
+    filename,
     photoBlob: input.photoBlob,
     thumbnailBlob: input.thumbnailBlob,
     latitude: input.latitude,

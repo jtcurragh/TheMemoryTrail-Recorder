@@ -32,12 +32,11 @@ describe('export', () => {
       trailType: 'graveyard',
       displayName: 'Ardmore Graveyard Trail',
     })
-    await createPOI({
+    const poi = await createPOI({
       trailId: graveyard.id,
       groupCode: 'ardmore',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'ardmore-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: 52.0,
@@ -51,8 +50,8 @@ describe('export', () => {
     const zip = await JSZip.loadAsync(zipBlob)
     const fileNames = Object.keys(zip.files).filter((n) => !n.endsWith('/'))
 
-    expect(fileNames).toContain('graveyard/ardmore-g-001.jpg')
-    expect(fileNames).not.toContain('ardmore-g-001.jpg')
+    expect(fileNames).toContain(`graveyard/${poi.filename}`)
+    expect(fileNames).not.toContain(poi.filename)
   })
 
   it('uses parish name (profile.groupName) for ZIP filename, not user name', () => {

@@ -72,7 +72,6 @@ describe('trails', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,

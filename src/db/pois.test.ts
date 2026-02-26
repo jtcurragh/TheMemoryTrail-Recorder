@@ -22,7 +22,6 @@ describe('pois', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: 53.2041,
@@ -31,22 +30,22 @@ describe('pois', () => {
       capturedAt: '2025-02-20T12:00:00Z',
     })
 
-    expect(poi.id).toBe('clonfert-g-001')
+    expect(poi.id).toMatch(/^clonfert-g-\d{6}-\d{6}-\d{3}$/)
+    expect(poi.filename).toBe(`${poi.id}.jpg`)
     expect(poi.siteName).toBe('')
     expect(poi.completed).toBe(false)
 
-    const retrieved = await getPOIById('clonfert-g-001', { includeBlobs: false })
-    expect(retrieved?.id).toBe('clonfert-g-001')
+    const retrieved = await getPOIById(poi.id, { includeBlobs: false })
+    expect(retrieved?.id).toBe(poi.id)
     expect(retrieved?.photoBlob).toBeUndefined()
   })
 
   it('gets POIs by trail id', async () => {
-    await createPOI({
+    const poi = await createPOI({
       trailId: 'clonfert-graveyard',
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,
@@ -59,7 +58,7 @@ describe('pois', () => {
       includeBlobs: false,
     })
     expect(pois).toHaveLength(1)
-    expect(pois[0].id).toBe('clonfert-g-001')
+    expect(pois[0].id).toBe(poi.id)
   })
 
   it('updates POI and sets completed when siteName and story filled', async () => {
@@ -68,7 +67,6 @@ describe('pois', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,
@@ -93,7 +91,6 @@ describe('pois', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,
@@ -112,7 +109,6 @@ describe('pois', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,
@@ -131,7 +127,6 @@ describe('pois', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,
@@ -156,7 +151,6 @@ describe('pois', () => {
       groupCode: 'clonfert',
       trailType: 'graveyard',
       sequence: 1,
-      filename: 'clonfert-g-001.jpg',
       photoBlob: mockBlob,
       thumbnailBlob: mockBlob,
       latitude: null,

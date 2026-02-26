@@ -96,7 +96,6 @@ describe('pdfExport', () => {
         groupCode: 'test',
         trailType: 'graveyard',
         sequence: i + 1,
-        filename: `test-g-00${i + 1}.jpg`,
         photoBlob: mockBlob,
         thumbnailBlob: mockBlob,
         latitude: 53 + i * 0.01,
@@ -107,6 +106,7 @@ describe('pdfExport', () => {
         description: 'Description',
         story: 'Story',
       })
+      if (i < 7) await new Promise((r) => setTimeout(r, 5))
     }
 
     await saveBrochureSetup({
