@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getPOIById, updatePOI, getPOIsByTrailId } from '../db/pois'
 import type { POIRecord, POICategory, PhotoRotation } from '../types'
+import { PARISH_CATEGORIES, GRAVEYARD_CATEGORIES } from '../config/categories'
 
 function PhotoImage({
   blob,
@@ -157,34 +158,26 @@ export function POIDetailScreen() {
     !Number.isNaN(poi.latitude) &&
     !Number.isNaN(poi.longitude)
 
-  const categories: POICategory[] = [
-    'Monument',
-    'Vernacular Building',
-    'Holy Well',
-    'Famine Site',
-    'Historic Feature',
-    'Natural Feature',
-    'Grave',
-    'Wrought Iron Gate',
-    'Timber Gate',
-    'Gate Piers',
-    'Creamery Stand',
-    'Stone Bridge',
-    'Iron Bridge',
-    'Timber Bridge',
-    'Boreen',
-    'Sruthán',
-    'Stream',
-    'River',
-    'Lime Kiln',
-    'Shed',
-    'Post Box',
-    'Phone Box',
-    'Petrol Pump',
-    'Ambush Site',
-    'Battle Site',
-    'Other',
-  ]
+  const categorySource =
+    poi.trailType === 'graveyard' ? GRAVEYARD_CATEGORIES : PARISH_CATEGORIES
+
+  const categoriesByGroup = categorySource.reduce<
+    Record<string, { value: string; label: string }[]>
+  >((acc, c) => {
+    if (!acc[c.group]) acc[c.group] = []
+    acc[c.group].push({ value: c.value, label: c.label })
+    return acc
+  }, {})
+
+  // Include legacy category if not in the current category list
+  const allLabels = categorySource.map((c) => c.label)
+  if (category && !allLabels.includes(category)) {
+    if (!categoriesByGroup['Other']) categoriesByGroup['Other'] = []
+    categoriesByGroup['Other'] = [
+      { value: category, label: category },
+      ...categoriesByGroup['Other'],
+    ]
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f5f0] p-6 pb-24">
@@ -302,22 +295,31 @@ export function POIDetailScreen() {
           <div
             role="group"
             aria-labelledby="category-label"
-            className="flex flex-wrap gap-2"
+            className="space-y-4"
           >
-            {categories.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCategory(c)}
-                aria-pressed={category === c}
-                className={`min-h-[48px] px-4 py-2 font-bold border-2 rounded-full ${
-                  category === c
-                    ? 'bg-[#2d7a6e] border-[#2d7a6e] text-white'
-                    : 'bg-white border-[#2d7a6e] text-[#2d7a6e]'
-                }`}
-              >
-                {c}
-              </button>
+            {Object.entries(categoriesByGroup).map(([groupName, items]) => (
+              <div key={groupName}>
+                <p className="text-sm font-semibold text-[#595959] mb-2">
+                  {groupName}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {items.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setCategory(item.label as POICategory)}
+                      aria-pressed={category === item.label}
+                      className={`min-h-[48px] px-4 py-2 font-bold border-2 rounded-full ${
+                        category === item.label
+                          ? 'bg-[#2d7a6e] border-[#2d7a6e] text-white'
+                          : 'bg-white border-[#2d7a6e] text-[#2d7a6e]'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

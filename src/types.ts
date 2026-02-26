@@ -1,32 +1,9 @@
 export type TrailType = 'graveyard' | 'parish'
 
-export type POICategory =
-  | 'Monument'
-  | 'Vernacular Building'
-  | 'Holy Well'
-  | 'Famine Site'
-  | 'Historic Feature'
-  | 'Natural Feature'
-  | 'Grave'
-  | 'Wrought Iron Gate'
-  | 'Timber Gate'
-  | 'Gate Piers'
-  | 'Creamery Stand'
-  | 'Stone Bridge'
-  | 'Iron Bridge'
-  | 'Timber Bridge'
-  | 'Boreen'
-  | 'Sruthán'
-  | 'Stream'
-  | 'River'
-  | 'Lime Kiln'
-  | 'Shed'
-  | 'Post Box'
-  | 'Phone Box'
-  | 'Petrol Pump'
-  | 'Ambush Site'
-  | 'Battle Site'
-  | 'Other'
+import type { ParishCategoryLabel, GraveyardCategoryLabel } from './config/categories'
+
+/** POI category. Uses labels from PARISH_CATEGORIES or GRAVEYARD_CATEGORIES. Legacy values still valid. */
+export type POICategory = ParishCategoryLabel | GraveyardCategoryLabel | string
 
 export type POICondition =
   | 'Good'
