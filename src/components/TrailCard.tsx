@@ -19,15 +19,17 @@ export function TrailCard({
   const progressPercent = Math.min(100, (poiCount / MAX_POIS) * 100)
 
   return (
-    <article className="border-2 border-govuk-border p-6 mb-6">
-      <h2 className="text-xl font-bold text-govuk-text mb-2">
+    <article
+      className="bg-white rounded-xl p-5 mb-6 border-l-[3px] border-l-[#3a9b8e] shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
+    >
+      <h2 className="text-[20px] font-bold text-[#1a2a2a] mb-2">
         {trail.displayName}
       </h2>
-      <p className="text-lg text-govuk-text mb-3">
+      <p className="text-base text-[#595959] mb-3">
         {poiCount} of {MAX_POIS} POIs recorded — {completedCount} completed
       </p>
       <div
-        className="h-2 bg-govuk-background mb-4"
+        className="h-[10px] bg-[#e0e0e0] rounded-full mb-4 overflow-hidden"
         role="progressbar"
         aria-valuenow={poiCount}
         aria-valuemin={0}
@@ -35,7 +37,7 @@ export function TrailCard({
         aria-label={`${poiCount} of ${MAX_POIS} POIs recorded`}
       >
         <div
-          className="h-full bg-tmt-teal transition-all"
+          className="h-full bg-[#3a9b8e] rounded-full transition-all"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -50,7 +52,7 @@ export function TrailCard({
           <button
             type="button"
             disabled
-            className="w-full min-h-[48px] px-4 py-3 bg-govuk-muted text-white font-bold opacity-60 cursor-not-allowed"
+            className="w-full min-h-[48px] px-4 py-3 bg-govuk-muted text-white font-bold opacity-60 cursor-not-allowed rounded-lg"
             aria-disabled="true"
           >
             Open {trail.trailType === 'graveyard' ? 'Graveyard' : 'Parish'} Trail
@@ -60,7 +62,7 @@ export function TrailCard({
         <button
           type="button"
           onClick={onOpen}
-          className="w-full min-h-[56px] bg-tmt-teal text-white text-lg font-bold px-4 py-3"
+          className="w-full min-h-[56px] bg-[#2d7a6e] text-white text-lg font-bold px-4 py-3 rounded-lg"
           aria-label={`Open ${trail.displayName}`}
         >
           Open {trail.trailType === 'graveyard' ? 'Graveyard' : 'Parish'} Trail

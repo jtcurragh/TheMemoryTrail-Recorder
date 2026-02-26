@@ -63,15 +63,15 @@ export function HomeScreen() {
 
   if (loading || !profile) {
     return (
-      <main className="min-h-screen bg-white p-6">
+      <main className="min-h-screen bg-[#f5f5f0] p-6">
         <p className="text-lg text-govuk-text">Loading...</p>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-white p-6 max-w-[680px] mx-auto pb-24">
-      <h1 className="text-2xl font-bold text-govuk-text mb-6" id="home-heading">
+    <main className="min-h-screen bg-[#f5f5f0] p-6 max-w-[680px] mx-auto pb-24">
+      <h1 className="text-2xl font-bold text-[#1a2a2a] mb-6" id="home-heading">
         Welcome back, {profile.name}
       </h1>
 

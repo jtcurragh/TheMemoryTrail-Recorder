@@ -11,7 +11,7 @@ const navItems: { to: string; label: string }[] = [
 export function BottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-govuk-border min-h-[64px] flex items-center justify-around"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e0e0e0] min-h-[64px] flex items-center justify-around"
       aria-label="Main navigation"
     >
       {navItems.map(({ to, label }) => (
