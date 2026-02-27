@@ -13,6 +13,9 @@ export type POICondition =
 
 export type PhotoRotation = 0 | 90 | 180 | 270
 
+/** How the POI's coordinates were obtained: exif (image EXIF), gps_capture (device GPS at capture), manual (pasted/entered in edit form). */
+export type CoordinateSource = 'exif' | 'gps_capture' | 'manual' | null
+
 export interface UserProfile {
   id: string
   email: string
@@ -54,6 +57,7 @@ export interface POIRecord {
   notes: string
   completed: boolean
   rotation: PhotoRotation
+  coordinateSource?: CoordinateSource
   createdBy?: string
   lastModifiedBy?: string
   lastModifiedAt?: string
@@ -79,6 +83,7 @@ export interface CreatePOIInput {
   url?: string
   condition?: POICondition
   notes?: string
+  coordinateSource?: CoordinateSource
   createdBy?: string
   lastModifiedBy?: string
   lastModifiedAt?: string
@@ -93,6 +98,10 @@ export interface UpdatePOIInput {
   condition?: POICondition
   notes?: string
   rotation?: PhotoRotation
+  latitude?: number | null
+  longitude?: number | null
+  accuracy?: number | null
+  coordinateSource?: CoordinateSource
 }
 
 export interface BrochureSetup {

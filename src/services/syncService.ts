@@ -136,6 +136,7 @@ async function processPOI(item: SyncQueueItem): Promise<void> {
       notes: poi!.notes,
       completed: poi!.completed,
       rotation: (poi!.rotation ?? 0) as number,
+      coordinate_source: poi!.coordinateSource ?? null,
       created_by: poi!.createdBy ?? null,
       last_modified_by: poi!.lastModifiedBy ?? null,
       last_modified_at: poi!.lastModifiedAt ?? null,

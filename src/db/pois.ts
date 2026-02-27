@@ -94,6 +94,7 @@ export async function createPOI(input: CreatePOIInput): Promise<POIRecord> {
     notes: input.notes ?? '',
     completed: !!(input.siteName && input.story),
     rotation: 0,
+    coordinateSource: input.coordinateSource ?? null,
   }
 
   const [photoBuf, thumbBuf] = await Promise.all([
