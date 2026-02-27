@@ -118,13 +118,16 @@ export function CaptureScreen() {
         let finalAccuracy = accuracy
 
         const gpsData = await extractGpsFromJpeg(file)
+        let coordinateSource: 'exif' | 'gps_capture' | null = null
         if (gpsData) {
           finalLat = gpsData.latitude
           finalLon = gpsData.longitude
           finalAccuracy = gpsData.accuracy
+          coordinateSource = 'exif'
         } else if (gpsStatus === 'success') {
           finalLat = latitude
           finalLon = longitude
+          coordinateSource = 'gps_capture'
         }
 
         let photoBlob: Blob = file
@@ -150,6 +153,7 @@ export function CaptureScreen() {
           longitude: finalLon,
           accuracy: finalAccuracy,
           capturedAt: new Date().toISOString(),
+          coordinateSource: coordinateSource ?? undefined,
         })
         await incrementTrailSequence(trail.id)
         sequence++
@@ -231,6 +235,8 @@ export function CaptureScreen() {
       await new Promise((r) => requestAnimationFrame(r))
       const sequence = trail.nextSequence
 
+      const coordinateSource =
+        gpsSource === 'exif' ? 'exif' : gpsSource === 'device' ? 'gps_capture' : null
       const poi = await createPOI({
         trailId: trail.id,
         groupCode: trail.groupCode,
@@ -242,6 +248,7 @@ export function CaptureScreen() {
         longitude: finalLon,
         accuracy: finalAccuracy,
         capturedAt: new Date().toISOString(),
+        coordinateSource,
       })
       await incrementTrailSequence(trail.id)
 

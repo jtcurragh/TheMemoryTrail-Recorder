@@ -342,6 +342,7 @@ async function restoreReturningUser(
           notes: p.notes ?? '',
           completed: p.completed ?? false,
           rotation: ((p.rotation ?? 0) as 0 | 90 | 180 | 270),
+          coordinateSource: (p.coordinate_source as POIRecord['coordinateSource']) ?? null,
           createdBy: p.created_by,
           lastModifiedBy: p.last_modified_by,
           lastModifiedAt: p.last_modified_at,
